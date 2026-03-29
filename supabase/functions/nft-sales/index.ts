@@ -7,6 +7,104 @@ const corsHeaders = {
 
 const ALCHEMY_BASE = 'https://eth-mainnet.g.alchemy.com/nft/v3/demo';
 
+const SOLANA_COLLECTIONS = [
+  'mad_lads', 'degods', 'okay_bears', 'famous_fox_federation',
+  'solana_monkey_business', 'tensorians', 'claynosaurz',
+];
+
+async function fetchEthSales(pageKey?: string): Promise<any[]> {
+  try {
+    const url = `${ALCHEMY_BASE}/getNFTSales?fromBlock=0&toBlock=latest&limit=10&order=desc${pageKey ? `&pageKey=${pageKey}` : ''}`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const sales = data.nftSales || [];
+
+    const metaRequests = sales.map((s: any) =>
+      fetch(`${ALCHEMY_BASE}/getNFTMetadata?contractAddress=${s.contractAddress}&tokenId=${s.tokenId}`, { headers: { Accept: 'application/json' } })
+        .then(r => r.ok ? r.json() : null).catch(() => null)
+    );
+    const metas = await Promise.all(metaRequests);
+
+    return sales.map((s: any, i: number) => {
+      const m = metas[i];
+      const total = (BigInt(s.sellerFee?.amount || '0') + BigInt(s.protocolFee?.amount || '0') + BigInt(s.royaltyFee?.amount || '0'));
+      const price = Number(total) / 1e18;
+      return {
+        id: `eth-${s.transactionHash}-${s.logIndex}`,
+        collection: m?.contract?.openSeaMetadata?.collectionName || m?.contract?.name || 'Unknown',
+        tokenName: m?.name || `#${s.tokenId}`,
+        price,
+        currency: 'ETH',
+        chain: 'ethereum',
+        marketplace: (s.marketplace || 'unknown').toUpperCase(),
+        image: m?.image?.cachedUrl || m?.image?.thumbnailUrl || m?.image?.originalUrl || '',
+      };
+    }).filter((s: any) => s.price > 0);
+  } catch { return []; }
+}
+
+async function fetchSolanaSales(): Promise<any[]> {
+  try {
+    const col = SOLANA_COLLECTIONS[Math.floor(Math.random() * SOLANA_COLLECTIONS.length)];
+    const res = await fetch(`https://api-mainnet.magiceden.dev/v2/collections/${col}/activities?type=buyNow&limit=10`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data.map((s: any) => ({
+      id: `sol-${s.signature}`,
+      collection: s.collectionSymbol?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) || 'Unknown',
+      tokenName: s.tokenMint ? `#${s.tokenMint.slice(0, 6)}` : 'Unknown',
+      price: s.price || 0,
+      currency: 'SOL',
+      chain: 'solana',
+      marketplace: (s.source || 'magiceden').toUpperCase().replace('MAGICEDEN_V2', 'MAGIC EDEN'),
+      image: s.image || '',
+    })).filter((s: any) => s.price > 0 && s.image);
+  } catch { return []; }
+}
+
+async function fetchTezosSales(): Promise<any[]> {
+  try {
+    const query = `{
+      event(where: {price_xtz: {_is_null: false, _gt: 0}}, order_by: {timestamp: desc}, limit: 10) {
+        token { name display_uri thumbnail_uri }
+        price_xtz
+        timestamp
+      }
+    }`;
+    const res = await fetch('https://data.objkt.com/v3/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const events = data?.data?.event || [];
+
+    return events.map((e: any, i: number) => {
+      const token = e.token || {};
+      let img = token.thumbnail_uri || token.display_uri || '';
+      if (img.startsWith('ipfs://')) {
+        img = img.replace('ipfs://', 'https://ipfs.io/ipfs/');
+      }
+      return {
+        id: `tez-${e.timestamp}-${i}`,
+        collection: token.name || 'Tezos NFT',
+        tokenName: token.name || 'Unknown',
+        price: (e.price_xtz || 0) / 1_000_000,
+        currency: 'XTZ',
+        chain: 'tezos',
+        marketplace: 'OBJKT',
+        image: img,
+      };
+    }).filter((s: any) => s.price > 0);
+  } catch { return []; }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -14,74 +112,29 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const pageKey = url.searchParams.get('pageKey') || '';
+    const chain = url.searchParams.get('chain') || 'all';
+    const pageKey = url.searchParams.get('pageKey') || undefined;
 
-    // Fetch recent NFT sales
-    const salesUrl = `${ALCHEMY_BASE}/getNFTSales?fromBlock=0&toBlock=latest&limit=20&order=desc${pageKey ? `&pageKey=${pageKey}` : ''}`;
-    const salesRes = await fetch(salesUrl, { headers: { 'Accept': 'application/json' } });
+    let sales: any[] = [];
 
-    if (!salesRes.ok) {
-      const text = await salesRes.text();
-      return new Response(JSON.stringify({ error: `Alchemy API error: ${salesRes.status}`, details: text }), {
-        status: salesRes.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (chain === 'all') {
+      const [eth, sol, tez] = await Promise.all([
+        fetchEthSales(pageKey),
+        fetchSolanaSales(),
+        fetchTezosSales(),
+      ]);
+      sales = [...eth, ...sol, ...tez];
+      // Shuffle for variety
+      sales.sort(() => Math.random() - 0.5);
+    } else if (chain === 'ethereum') {
+      sales = await fetchEthSales(pageKey);
+    } else if (chain === 'solana') {
+      sales = await fetchSolanaSales();
+    } else if (chain === 'tezos') {
+      sales = await fetchTezosSales();
     }
 
-    const salesData = await salesRes.json();
-    const sales = salesData.nftSales || [];
-
-    // Fetch metadata for each unique contract+token (batch up to 20)
-    const metadataRequests = sales.slice(0, 20).map((sale: any) => {
-      const metaUrl = `${ALCHEMY_BASE}/getNFTMetadata?contractAddress=${sale.contractAddress}&tokenId=${sale.tokenId}`;
-      return fetch(metaUrl, { headers: { 'Accept': 'application/json' } })
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null);
-    });
-
-    const metadataResults = await Promise.all(metadataRequests);
-
-    // Combine sales with metadata
-    const enrichedSales = sales.slice(0, 20).map((sale: any, i: number) => {
-      const meta = metadataResults[i];
-      const sellerFeeWei = BigInt(sale.sellerFee?.amount || '0');
-      const protocolFeeWei = BigInt(sale.protocolFee?.amount || '0');
-      const royaltyFeeWei = BigInt(sale.royaltyFee?.amount || '0');
-      const totalWei = sellerFeeWei + protocolFeeWei + royaltyFeeWei;
-      const priceEth = Number(totalWei) / 1e18;
-
-      const marketplace = (sale.marketplace || 'unknown').toUpperCase();
-
-      // Get image - try multiple sources
-      let image = meta?.image?.cachedUrl
-        || meta?.image?.thumbnailUrl
-        || meta?.image?.originalUrl
-        || meta?.raw?.metadata?.image
-        || '';
-
-      // Get collection name
-      const collection = meta?.contract?.openSeaMetadata?.collectionName
-        || meta?.contract?.name
-        || `${sale.contractAddress.slice(0, 6)}...${sale.contractAddress.slice(-4)}`;
-
-      const tokenName = meta?.name || `#${sale.tokenId}`;
-
-      return {
-        id: `${sale.transactionHash}-${sale.logIndex}-${sale.bundleIndex}`,
-        collection,
-        tokenName,
-        price: priceEth,
-        currency: sale.sellerFee?.symbol || 'ETH',
-        marketplace,
-        blockNumber: sale.blockNumber,
-        image,
-      };
-    });
-
-    return new Response(JSON.stringify({
-      sales: enrichedSales,
-      pageKey: salesData.pageKey || null,
-    }), {
+    return new Response(JSON.stringify({ sales }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
