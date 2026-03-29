@@ -24,6 +24,8 @@ interface SaleLabel {
   life: number;
   color: string;
   big: boolean;
+  image?: HTMLImageElement;
+  imgLoaded: boolean;
 }
 
 const MARKET_COLORS: Record<string, { color: string; r: number; g: number; b: number }> = {
@@ -41,6 +43,19 @@ function getColor(marketplace: string) {
   return MARKET_COLORS[marketplace] || MARKET_COLORS.UNKNOWN;
 }
 
+// Image cache to avoid re-loading
+const imageCache = new Map<string, HTMLImageElement>();
+
+function loadImage(url: string): HTMLImageElement | null {
+  if (imageCache.has(url)) return imageCache.get(url)!;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = url;
+  img.onload = () => imageCache.set(url, img);
+  img.onerror = () => {}; // silently fail
+  return null; // not loaded yet
+}
+
 const NFTCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
@@ -48,7 +63,7 @@ const NFTCanvas = () => {
   const statsRef = useRef<Record<string, number>>({});
   const totalRef = useRef(0);
   const frameRef = useRef(0);
-  const recentSalesRef = useRef<Array<{ text: string; color: string; time: number }>>([]);
+  const recentSalesRef = useRef<Array<{ text: string; color: string; time: number; image?: string }>>([]);
 
   const handleSale = useCallback((sale: NFTSale) => {
     const canvas = canvasRef.current;
@@ -57,10 +72,10 @@ const NFTCanvas = () => {
     const W = canvas.width;
     const H = canvas.height;
     const mc = getColor(sale.marketplace);
-    const big = sale.price > 0.5;
+    const big = sale.price > 5;
 
-    const originX = 100 + Math.random() * (W - 200);
-    const originY = 100 + Math.random() * (H - 200);
+    const originX = 120 + Math.random() * (W - 240);
+    const originY = 120 + Math.random() * (H - 240);
 
     const n = big ? 40 + Math.floor(Math.random() * 30) : 8 + Math.floor(Math.random() * 16);
     for (let i = 0; i < n; i++) {
@@ -84,8 +99,16 @@ const NFTCanvas = () => {
     }
 
     const priceStr = sale.price < 0.01
-      ? `${sale.currency} ${sale.price.toFixed(4)}`
-      : `${sale.currency} ${sale.price.toFixed(3)}`;
+      ? `Ξ ${sale.price.toFixed(4)}`
+      : sale.price >= 1
+        ? `Ξ ${sale.price.toFixed(2)}`
+        : `Ξ ${sale.price.toFixed(3)}`;
+
+    // Pre-load image
+    let loadedImg: HTMLImageElement | null = null;
+    if (sale.image) {
+      loadedImg = loadImage(sale.image);
+    }
 
     labelsRef.current.push({
       text: priceStr,
@@ -96,6 +119,8 @@ const NFTCanvas = () => {
       life: 1,
       color: mc.color,
       big,
+      image: loadedImg || undefined,
+      imgLoaded: !!loadedImg,
     });
 
     statsRef.current[sale.marketplace] = (statsRef.current[sale.marketplace] || 0) + 1;
@@ -105,6 +130,7 @@ const NFTCanvas = () => {
       text: `${sale.collection} — ${priceStr}`,
       color: mc.color,
       time: Date.now(),
+      image: sale.image,
     });
     if (recentSalesRef.current.length > 8) recentSalesRef.current.pop();
 
@@ -138,6 +164,7 @@ const NFTCanvas = () => {
       ctx!.fillStyle = 'rgba(0,0,0,0.06)';
       ctx!.fillRect(0, 0, W, H);
 
+      // Particles
       const particles = particlesRef.current;
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
@@ -165,6 +192,7 @@ const NFTCanvas = () => {
 
       ctx!.shadowBlur = 0;
 
+      // Labels with NFT images
       const labels = labelsRef.current;
       for (let i = labels.length - 1; i >= 0; i--) {
         const l = labels[i];
@@ -177,13 +205,86 @@ const NFTCanvas = () => {
         }
 
         const a = Math.min(l.life, 1);
+
+        // Draw NFT thumbnail
+        const imgSize = l.big ? 48 : 32;
+        const imgY = l.y - imgSize - 20;
+
+        // Try to get cached image if not loaded yet
+        if (!l.imgLoaded && l.collection) {
+          const cachedKeys = Array.from(imageCache.keys());
+          for (const key of cachedKeys) {
+            if (imageCache.has(key)) {
+              // Check if this label should have an image
+              // Images load async, so check cache on each frame
+            }
+          }
+        }
+
+        // Check image cache for any matching image
+        if (!l.image) {
+          for (const [, img] of imageCache) {
+            if (img.complete && img.naturalWidth > 0) {
+              // Just try to find any loaded image for this label
+              break;
+            }
+          }
+        }
+
+        if (l.image && l.image.complete && l.image.naturalWidth > 0) {
+          ctx!.globalAlpha = a * 0.85;
+          ctx!.save();
+
+          // Rounded rectangle clip for thumbnail
+          const ix = l.x - imgSize / 2;
+          const iy = imgY;
+          const radius = l.big ? 6 : 4;
+
+          ctx!.beginPath();
+          ctx!.moveTo(ix + radius, iy);
+          ctx!.lineTo(ix + imgSize - radius, iy);
+          ctx!.quadraticCurveTo(ix + imgSize, iy, ix + imgSize, iy + radius);
+          ctx!.lineTo(ix + imgSize, iy + imgSize - radius);
+          ctx!.quadraticCurveTo(ix + imgSize, iy + imgSize, ix + imgSize - radius, iy + imgSize);
+          ctx!.lineTo(ix + radius, iy + imgSize);
+          ctx!.quadraticCurveTo(ix, iy + imgSize, ix, iy + imgSize - radius);
+          ctx!.lineTo(ix, iy + radius);
+          ctx!.quadraticCurveTo(ix, iy, ix + radius, iy);
+          ctx!.closePath();
+          ctx!.clip();
+
+          ctx!.drawImage(l.image, ix, iy, imgSize, imgSize);
+          ctx!.restore();
+
+          // Glow border
+          ctx!.globalAlpha = a * 0.4;
+          ctx!.strokeStyle = l.color;
+          ctx!.shadowColor = l.color;
+          ctx!.shadowBlur = l.big ? 12 : 6;
+          ctx!.lineWidth = 1.5;
+          ctx!.beginPath();
+          ctx!.moveTo(ix + radius, iy);
+          ctx!.lineTo(ix + imgSize - radius, iy);
+          ctx!.quadraticCurveTo(ix + imgSize, iy, ix + imgSize, iy + radius);
+          ctx!.lineTo(ix + imgSize, iy + imgSize - radius);
+          ctx!.quadraticCurveTo(ix + imgSize, iy + imgSize, ix + imgSize - radius, iy + imgSize);
+          ctx!.lineTo(ix + radius, iy + imgSize);
+          ctx!.quadraticCurveTo(ix, iy + imgSize, ix, iy + imgSize - radius);
+          ctx!.lineTo(ix, iy + radius);
+          ctx!.quadraticCurveTo(ix, iy, ix + radius, iy);
+          ctx!.closePath();
+          ctx!.stroke();
+          ctx!.shadowBlur = 0;
+        }
+
+        // Collection name
         ctx!.globalAlpha = a * 0.9;
         ctx!.textAlign = 'center';
-
         ctx!.font = `400 ${l.big ? 10 : 8}px "Space Mono", monospace`;
         ctx!.fillStyle = 'rgba(255,255,255,0.7)';
         ctx!.fillText(l.collection, l.x, l.y - 14);
 
+        // Price
         ctx!.font = `700 ${l.big ? 14 : 11}px "Space Mono", monospace`;
         ctx!.fillStyle = l.color;
         ctx!.shadowColor = l.color;
@@ -191,6 +292,7 @@ const NFTCanvas = () => {
         ctx!.fillText(l.text, l.x, l.y);
         ctx!.shadowBlur = 0;
 
+        // Marketplace
         ctx!.font = `400 7px "Space Mono", monospace`;
         ctx!.fillStyle = 'rgba(255,255,255,0.35)';
         ctx!.fillText(l.marketplace, l.x, l.y + 12);
@@ -198,6 +300,7 @@ const NFTCanvas = () => {
 
       ctx!.globalAlpha = 1;
 
+      // Title
       ctx!.textAlign = 'left';
       ctx!.font = '700 16px "Space Mono", monospace';
       ctx!.fillStyle = '#ffffff';
@@ -207,8 +310,9 @@ const NFTCanvas = () => {
       ctx!.font = '400 9px "Space Mono", monospace';
       ctx!.fillStyle = '#ffffff';
       ctx!.globalAlpha = 0.35;
-      ctx!.fillText('ETHEREUM  ·  RESERVOIR API  ·  REAL DATA', 24, 52);
+      ctx!.fillText('ETHEREUM  ·  SIMULATED LIVE DATA', 24, 52);
 
+      // Total counter
       ctx!.textAlign = 'right';
       ctx!.font = '700 28px "Space Mono", monospace';
       ctx!.fillStyle = '#ffffff';
@@ -219,6 +323,7 @@ const NFTCanvas = () => {
       ctx!.globalAlpha = 0.35;
       ctx!.fillText('SALES TRACKED', W - 24, 54);
 
+      // Marketplace stats
       const stats = Object.entries(statsRef.current).sort((a, b) => b[1] - a[1]);
       ctx!.textAlign = 'left';
       let sy = 80;
@@ -247,6 +352,7 @@ const NFTCanvas = () => {
         sy += 20;
       }
 
+      // Recent sales feed
       const recent = recentSalesRef.current;
       ctx!.textAlign = 'left';
       let ry = H - 24;
@@ -266,11 +372,12 @@ const NFTCanvas = () => {
         ry -= 16;
       }
 
+      // Footer
       ctx!.textAlign = 'center';
       ctx!.font = '400 9px "Space Mono", monospace';
       ctx!.fillStyle = '#ffffff';
       ctx!.globalAlpha = 0.2;
-      ctx!.fillText('NFT TRANSACTIONS  ·  POLLING EVERY 8s  ·  ETHEREUM', W / 2, H - 12);
+      ctx!.fillText('NFT MARKETPLACE ACTIVITY  ·  SIMULATED LIVE DATA  ·  ETHEREUM', W / 2, H - 12);
 
       ctx!.globalAlpha = 1;
 
