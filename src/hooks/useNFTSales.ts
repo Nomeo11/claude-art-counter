@@ -13,29 +13,30 @@ export interface NFTSale {
 
 type SaleCallback = (sale: NFTSale) => void;
 
+// Use publicly accessible NFT images via IPFS gateways and other reliable hosts
 const COLLECTIONS = [
-  { name: 'Bored Ape Yacht Club', floor: 8, max: 120, img: 'https://i.seadn.io/gae/Ju9CkWtV-1Okvf45wo8UctR0M9rAKFENIlu0Dnv-BZmKMi8rB5a4UhFPYkfLTCqOaOE7Tg' },
-  { name: 'CryptoPunks', floor: 25, max: 200, img: 'https://i.seadn.io/gae/BdxvLseXcfl57BiuQcQYdJ64v-aI8din7WPk0Pgo3qQFhAUH-B6i-dCqqc_mCkRIzULmwzwecnohLhrcH8A9mpWIZqA7yfnrgNxJ_Q' },
-  { name: 'Azuki', floor: 4, max: 50, img: 'https://i.seadn.io/gcs/files/1017097edc3e7dd7dab1e53b3deaa4b3.png' },
-  { name: 'Pudgy Penguins', floor: 8, max: 60, img: 'https://i.seadn.io/gae/yNi-XdGxsgQCPpqSio4o31ygAV6wURdIdInWRcFIl46UjUQ1eV7BEndGe8L661OoG-clRi7EgInLX4LPu5Jjga4GI_pziZCrix_pHZBI' },
-  { name: 'Doodles', floor: 2, max: 30, img: 'https://i.seadn.io/gae/7B0qai02OdHA8P_EOVK672qUliyjQdQDGNrACxs7WnTgZAkJa_wWURnIFKeOh5VTf8cfTqW3wQpozGedaC9mteKphEOtztls02RlWQ' },
-  { name: 'CloneX', floor: 1.5, max: 25, img: 'https://i.seadn.io/gae/XN0XuD8Uh3jyRWNtPTFeXJg_ht8m5ofDx6aHklOiy4amhFuWUa0JaR6It49AH8tlnYS386Q0TW_-Lmedn0UET_ko1a3CbJGeu5iHMg' },
-  { name: 'Moonbirds', floor: 0.8, max: 15, img: 'https://i.seadn.io/gae/H-eyNE1MtWA3aRuSP8KE0xwi-7N5J5TlTO3K4QkLn-PKnAdbZGSmK0qdNVEJfoSYLA4JC3jmA2KR_vFA9OVr3ABwwGs2PH6M5Q' },
-  { name: 'Art Blocks', floor: 0.5, max: 80, img: 'https://i.seadn.io/gae/GHhptRLebBOcz-HVNX0UYV-_JGeLDkzDBygebH1OBxu7PcPSrmMpz55klVSfbd_FU3MrpM3E3w3OP5VbZGGZ0gC_BbghXwA_gFmGVw' },
-  { name: 'Chromie Squiggle', floor: 3, max: 60, img: 'https://i.seadn.io/gae/M_q-hJqvDB5B30Wm1K8NoSH-2rmVPM3Yjj3E4K3Kh5BNFJMwX28RvTJqPiTDI3bVi1jx3WEATHX-d5jLXgMXIBL1g' },
-  { name: 'Fidenza', floor: 30, max: 300, img: 'https://i.seadn.io/gae/6LdH7M2KZxS2w-NjrPkN_4sm2FpL8dXQ9u6tJYvb1IYHNgyEW-IhHJOIciCgkL9rLJ1EEgNafj5rwVJ2F42SZQO_' },
-  { name: 'DeGods', floor: 2, max: 30, img: 'https://i.seadn.io/gcs/files/09328274879f441950ee98632b8d2dd6.png' },
-  { name: 'Milady Maker', floor: 3, max: 20, img: 'https://i.seadn.io/gcs/files/e33b2eed3904ee4ed5aa4f6bfcbc6e67.png' },
-  { name: 'Checks VV', floor: 0.3, max: 8, img: 'https://i.seadn.io/gcs/files/5780b0e18b3a1eab5cd12f7e844c49ad.png' },
-  { name: 'Opepen', floor: 0.2, max: 5, img: 'https://i.seadn.io/gcs/files/53a03e0e67cd31dfc7f17c253a5a4d3b.jpg' },
-  { name: 'Nouns', floor: 15, max: 100, img: 'https://i.seadn.io/gae/vfYB4MU-XTi8f15DAHTfhvMpwMEUzKMori4ooo1E6fa2bbBaUT7MvvDbQjMbFRsSJgfN-xoDBIpTBP8MfczkuUkHAGpf_CP63uNBXv' },
-  { name: 'Cool Cats', floor: 0.5, max: 8, img: 'https://i.seadn.io/gae/LIov33kogXOK4XZd2ESj29sqm_Hww5JSdO7AFn5LpKax7C01JMC8mtMOGIfTe4YwseVTjOB6RCMn__6VB5FwYPNXEw' },
-  { name: 'World of Women', floor: 0.3, max: 5, img: 'https://i.seadn.io/gae/EFAQpIktMBU5SU0TqSdPWZ4BY0b0G6GBbKHpPa1VUoYL9WUpbWwkl8rRCq5PLYZUAKB1B0YfMKqPLRJZi_Gsb52JzUo' },
-  { name: 'Meebits', floor: 1, max: 12, img: 'https://i.seadn.io/gae/d784iHHbqQFVH1XYD6HoT4u3y_Fsu_9FZUltWjnOzoYv7qqB5dLUqpGyHBd8Gq3h4mykK5Enj8pxqOUorgD2PfIWcVj9ugvu8l0' },
+  { name: 'Bored Ape Yacht Club', floor: 8, max: 120, img: 'https://ipfs.io/ipfs/QmRRPWG96cmgTn2qSzjwr2qvfNEuhunv6FNeMFGa9bx6mQ' },
+  { name: 'CryptoPunks', floor: 25, max: 200, img: 'https://ipfs.io/ipfs/QmWEFSMku6yGLQ9TQr3AXAi3YhLjcXMbqCeEcSaWg1JQah' },
+  { name: 'Azuki', floor: 4, max: 50, img: 'https://ipfs.io/ipfs/QmYDvPAXtiJg7s8JdRBSLWdgSphQdac8j1YuQNNxcGE1hg/1.png' },
+  { name: 'Pudgy Penguins', floor: 8, max: 60, img: 'https://ipfs.io/ipfs/QmNf1UsmdGaMbpatQ6toXbzXo3GjSf76diJ1AvA1FL1cp3/2.png' },
+  { name: 'Doodles', floor: 2, max: 30, img: 'https://ipfs.io/ipfs/QmPMc4tcBsMqLRuCQtPmPe84bpSjrC3Ky7t3JWuHXYB4aS/1' },
+  { name: 'CloneX', floor: 1.5, max: 25, img: 'https://clonex-assets.rtfkt.com/images/1.png' },
+  { name: 'Moonbirds', floor: 0.8, max: 15, img: 'https://live---metadata-5covpqijaa-uc.a.run.app/images/1' },
+  { name: 'Art Blocks: Fidenza', floor: 30, max: 300, img: 'https://media.artblocks.io/78000001.png' },
+  { name: 'Art Blocks: Squiggle', floor: 3, max: 60, img: 'https://media.artblocks.io/0.png' },
+  { name: 'Art Blocks: Ringers', floor: 5, max: 80, img: 'https://media.artblocks.io/13000001.png' },
+  { name: 'DeGods', floor: 2, max: 30, img: 'https://metadata.degods.com/g/1.png' },
+  { name: 'Milady Maker', floor: 3, max: 20, img: 'https://www.miladymaker.net/milady/1.png' },
+  { name: 'Nouns', floor: 15, max: 100, img: 'https://noun.pics/1' },
+  { name: 'Cool Cats', floor: 0.5, max: 8, img: 'https://ipfs.io/ipfs/QmSg1DP3TYqLivhyXAGDRL3YSQAosNHr1o3oehqJFRCzUz/1.png' },
+  { name: 'World of Women', floor: 0.3, max: 5, img: 'https://ipfs.io/ipfs/QmTvSRKDo3z1LCpMS5QS3eU6PFmGWLkjU7WRAXHP8Fembk/1.png' },
+  { name: 'Meebits', floor: 1, max: 12, img: 'https://meebits.larvalabs.com/meebitimages/characterimage?index=1&type=full&width=600' },
+  { name: 'Checks VV', floor: 0.3, max: 8, img: 'https://checks.art/api/checks/1/img' },
+  { name: 'Invisible Friends', floor: 0.5, max: 6, img: 'https://ipfs.io/ipfs/QmVwBqEfMYaYBNSD9C7pYsFBLv1fMUWUuyhpNYm4F52aM6/1.gif' },
 ];
 
 const MARKETS = ['OPENSEA', 'BLUR', 'FOUNDATION', 'SUPERRARE', 'LOOKSRARE', 'X2Y2', 'RARIBLE'];
-const MARKET_WEIGHTS = [40, 30, 5, 3, 8, 7, 7]; // Weighted distribution
+const MARKET_WEIGHTS = [40, 30, 5, 3, 8, 7, 7];
 
 function weightedRandom(weights: number[]): number {
   const total = weights.reduce((a, b) => a + b, 0);
@@ -69,7 +70,7 @@ function generateSale(): NFTSale {
 }
 
 export function useNFTSales(onSale: SaleCallback) {
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const intervalRef = useRef<ReturnType<typeof setTimeout>>();
   const onSaleRef = useRef(onSale);
   onSaleRef.current = onSale;
 
@@ -86,16 +87,15 @@ export function useNFTSales(onSale: SaleCallback) {
       setTimeout(() => onSaleRef.current(generateSale()), i * 200);
     }
 
-    // Ongoing sales every 2-6 seconds
     function schedule() {
       const delay = 2000 + Math.random() * 4000;
       intervalRef.current = setTimeout(() => {
         emitBatch();
         schedule();
-      }, delay) as unknown as ReturnType<typeof setInterval>;
+      }, delay);
     }
     schedule();
 
-    return () => clearTimeout(intervalRef.current as unknown as number);
+    return () => clearTimeout(intervalRef.current);
   }, [emitBatch]);
 }
