@@ -31,8 +31,7 @@ interface SaleLabel {
   life: number;
   color: string;
   big: boolean;
-  image?: HTMLImageElement;
-  imgLoaded: boolean;
+  imageUrl?: string;
 }
 
 const MARKET_COLORS: Record<string, { color: string; r: number; g: number; b: number }> = {
