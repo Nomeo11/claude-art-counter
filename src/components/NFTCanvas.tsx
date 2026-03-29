@@ -117,9 +117,8 @@ const NFTCanvas = () => {
         : `Ξ ${sale.price.toFixed(3)}`;
 
     // Pre-load image
-    let loadedImg: HTMLImageElement | null = null;
     if (sale.image) {
-      loadedImg = loadImage(sale.image);
+      loadImage(sale.image);
     }
 
     labelsRef.current.push({
@@ -131,8 +130,7 @@ const NFTCanvas = () => {
       life: 1,
       color: mc.color,
       big,
-      image: loadedImg || undefined,
-      imgLoaded: !!loadedImg,
+      imageUrl: sale.image,
     });
 
     statsRef.current[sale.marketplace] = (statsRef.current[sale.marketplace] || 0) + 1;
