@@ -13,26 +13,45 @@ export interface NFTSale {
 
 type SaleCallback = (sale: NFTSale) => void;
 
-// Use publicly accessible NFT images via IPFS gateways and other reliable hosts
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+const seenIds = new Set<string>();
+
+async function fetchRealSales(): Promise<NFTSale[]> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/nft-sales`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.sales || !Array.isArray(data.sales)) return [];
+
+    return data.sales
+      .filter((s: any) => s.price > 0 && !seenIds.has(s.id))
+      .map((s: any) => {
+        seenIds.add(s.id);
+        return {
+          id: s.id,
+          collection: s.collection,
+          tokenName: s.tokenName,
+          price: s.price,
+          currency: s.currency || 'ETH',
+          marketplace: s.marketplace,
+          timestamp: Date.now(),
+          image: s.image || undefined,
+        };
+      });
+  } catch (e) {
+    console.warn('Failed to fetch real NFT sales, using simulation:', e);
+    return [];
+  }
+}
+
+// Fallback simulation
 const COLLECTIONS = [
   { name: 'Bored Ape Yacht Club', floor: 8, max: 120, img: 'https://ipfs.io/ipfs/QmRRPWG96cmgTn2qSzjwr2qvfNEuhunv6FNeMFGa9bx6mQ' },
   { name: 'CryptoPunks', floor: 25, max: 200, img: 'https://ipfs.io/ipfs/QmWEFSMku6yGLQ9TQr3AXAi3YhLjcXMbqCeEcSaWg1JQah' },
   { name: 'Azuki', floor: 4, max: 50, img: 'https://ipfs.io/ipfs/QmYDvPAXtiJg7s8JdRBSLWdgSphQdac8j1YuQNNxcGE1hg/1.png' },
   { name: 'Pudgy Penguins', floor: 8, max: 60, img: 'https://ipfs.io/ipfs/QmNf1UsmdGaMbpatQ6toXbzXo3GjSf76diJ1AvA1FL1cp3/2.png' },
   { name: 'Doodles', floor: 2, max: 30, img: 'https://ipfs.io/ipfs/QmPMc4tcBsMqLRuCQtPmPe84bpSjrC3Ky7t3JWuHXYB4aS/1' },
-  { name: 'CloneX', floor: 1.5, max: 25, img: 'https://clonex-assets.rtfkt.com/images/1.png' },
-  { name: 'Moonbirds', floor: 0.8, max: 15, img: 'https://live---metadata-5covpqijaa-uc.a.run.app/images/1' },
-  { name: 'Art Blocks: Fidenza', floor: 30, max: 300, img: 'https://media.artblocks.io/78000001.png' },
-  { name: 'Art Blocks: Squiggle', floor: 3, max: 60, img: 'https://media.artblocks.io/0.png' },
-  { name: 'Art Blocks: Ringers', floor: 5, max: 80, img: 'https://media.artblocks.io/13000001.png' },
-  { name: 'DeGods', floor: 2, max: 30, img: 'https://metadata.degods.com/g/1.png' },
-  { name: 'Milady Maker', floor: 3, max: 20, img: 'https://www.miladymaker.net/milady/1.png' },
-  { name: 'Nouns', floor: 15, max: 100, img: 'https://noun.pics/1' },
-  { name: 'Cool Cats', floor: 0.5, max: 8, img: 'https://ipfs.io/ipfs/QmSg1DP3TYqLivhyXAGDRL3YSQAosNHr1o3oehqJFRCzUz/1.png' },
-  { name: 'World of Women', floor: 0.3, max: 5, img: 'https://ipfs.io/ipfs/QmTvSRKDo3z1LCpMS5QS3eU6PFmGWLkjU7WRAXHP8Fembk/1.png' },
-  { name: 'Meebits', floor: 1, max: 12, img: 'https://meebits.larvalabs.com/meebitimages/characterimage?index=1&type=full&width=600' },
-  { name: 'Checks VV', floor: 0.3, max: 8, img: 'https://checks.art/api/checks/1/img' },
-  { name: 'Invisible Friends', floor: 0.5, max: 6, img: 'https://ipfs.io/ipfs/QmVwBqEfMYaYBNSD9C7pYsFBLv1fMUWUuyhpNYm4F52aM6/1.gif' },
 ];
 
 const MARKETS = ['OPENSEA', 'BLUR', 'FOUNDATION', 'SUPERRARE', 'LOOKSRARE', 'X2Y2', 'RARIBLE'];
@@ -51,51 +70,55 @@ function weightedRandom(weights: number[]): number {
 function generateSale(): NFTSale {
   const col = COLLECTIONS[Math.floor(Math.random() * COLLECTIONS.length)];
   const marketIdx = weightedRandom(MARKET_WEIGHTS);
-  const marketplace = MARKETS[marketIdx];
-  const big = Math.random() < 0.06;
-  const price = big
-    ? col.floor + Math.random() * (col.max - col.floor)
-    : col.floor * (0.8 + Math.random() * 0.4);
-
+  const price = col.floor * (0.8 + Math.random() * 0.4);
   return {
-    id: `sale-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: `sim-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     collection: col.name,
     tokenName: `#${Math.floor(Math.random() * 9999)}`,
     price: Math.round(price * 1000) / 1000,
     currency: 'ETH',
-    marketplace,
+    marketplace: MARKETS[marketIdx],
     timestamp: Date.now(),
     image: col.img,
   };
 }
 
 export function useNFTSales(onSale: SaleCallback) {
-  const intervalRef = useRef<ReturnType<typeof setTimeout>>();
   const onSaleRef = useRef(onSale);
   onSaleRef.current = onSale;
+  const intervalRef = useRef<ReturnType<typeof setTimeout>>();
+  const usingRealData = useRef(false);
 
-  const emitBatch = useCallback(() => {
-    const count = 1 + Math.floor(Math.random() * 5);
-    for (let i = 0; i < count; i++) {
-      setTimeout(() => onSaleRef.current(generateSale()), i * 150);
+  const pollReal = useCallback(async () => {
+    const sales = await fetchRealSales();
+    if (sales.length > 0) {
+      usingRealData.current = true;
+      // Drip-feed sales with delays for visual effect
+      sales.forEach((sale, i) => {
+        setTimeout(() => onSaleRef.current(sale), i * 300);
+      });
+    } else if (!usingRealData.current) {
+      // Fallback: emit simulated sales
+      const count = 1 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => onSaleRef.current(generateSale()), i * 150);
+      }
     }
   }, []);
 
   useEffect(() => {
-    // Initial burst
-    for (let i = 0; i < 8; i++) {
-      setTimeout(() => onSaleRef.current(generateSale()), i * 200);
-    }
+    // Initial fetch
+    pollReal();
 
+    // Poll every 10 seconds
     function schedule() {
-      const delay = 2000 + Math.random() * 4000;
-      intervalRef.current = setTimeout(() => {
-        emitBatch();
+      intervalRef.current = setTimeout(async () => {
+        await pollReal();
         schedule();
-      }, delay);
+      }, 10000);
     }
     schedule();
 
     return () => clearTimeout(intervalRef.current);
-  }, [emitBatch]);
+  }, [pollReal]);
 }
