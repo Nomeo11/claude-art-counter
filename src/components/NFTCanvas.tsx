@@ -18,7 +18,11 @@ interface SaleCard {
   loaded: boolean;
   img: HTMLImageElement | null;
   born: number;
+  column: number; // which chain column: 0=eth, 1=sol, 2=tez
 }
+
+const CHAIN_ORDER = ['ethereum', 'solana', 'tezos'];
+const CHAIN_LABELS = ['ETHEREUM', 'SOLANA', 'TEZOS'];
 
 const CHAIN_COLORS: Record<string, string> = {
   ethereum: '#627EEA',
