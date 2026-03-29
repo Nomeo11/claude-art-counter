@@ -270,7 +270,7 @@ const NFTCanvas = () => {
       ctx!.font = '400 9px "Space Mono", monospace';
       ctx!.fillStyle = '#ffffff';
       ctx!.globalAlpha = 0.2;
-      ctx!.fillText('LIVE DATA  ·  POLLING EVERY 8s  ·  ETHEREUM MAINNET', W / 2, H - 12);
+      ctx!.fillText('NFT TRANSACTIONS  ·  POLLING EVERY 8s  ·  ETHEREUM', W / 2, H - 12);
 
       ctx!.globalAlpha = 1;
 
