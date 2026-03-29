@@ -1,6 +1,12 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useNFTSales, type NFTSale } from '@/hooks/useNFTSales';
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+function proxyImageUrl(url: string): string {
+  return `${SUPABASE_URL}/functions/v1/image-proxy?url=${encodeURIComponent(url)}`;
+}
+
 interface Particle {
   x: number;
   y: number;
@@ -24,8 +30,7 @@ interface SaleLabel {
   life: number;
   color: string;
   big: boolean;
-  image?: HTMLImageElement;
-  imgLoaded: boolean;
+  imageUrl?: string;
 }
 
 const MARKET_COLORS: Record<string, { color: string; r: number; g: number; b: number }> = {
@@ -47,13 +52,19 @@ function getColor(marketplace: string) {
 const imageCache = new Map<string, HTMLImageElement>();
 
 function loadImage(url: string): HTMLImageElement | null {
-  if (imageCache.has(url)) return imageCache.get(url)!;
+  const proxied = proxyImageUrl(url);
+  if (imageCache.has(url)) {
+    const cached = imageCache.get(url)!;
+    if (cached.complete && cached.naturalWidth > 0) return cached;
+    return null;
+  }
   const img = new Image();
   img.crossOrigin = 'anonymous';
-  img.src = url;
+  img.src = proxied;
   img.onload = () => imageCache.set(url, img);
-  img.onerror = () => {}; // silently fail
-  return null; // not loaded yet
+  img.onerror = () => {};
+  imageCache.set(url, img); // store early so we don't re-request
+  return null;
 }
 
 const NFTCanvas = () => {
@@ -105,9 +116,8 @@ const NFTCanvas = () => {
         : `Ξ ${sale.price.toFixed(3)}`;
 
     // Pre-load image
-    let loadedImg: HTMLImageElement | null = null;
     if (sale.image) {
-      loadedImg = loadImage(sale.image);
+      loadImage(sale.image);
     }
 
     labelsRef.current.push({
@@ -119,8 +129,7 @@ const NFTCanvas = () => {
       life: 1,
       color: mc.color,
       big,
-      image: loadedImg || undefined,
-      imgLoaded: !!loadedImg,
+      imageUrl: sale.image,
     });
 
     statsRef.current[sale.marketplace] = (statsRef.current[sale.marketplace] || 0) + 1;
@@ -210,28 +219,11 @@ const NFTCanvas = () => {
         const imgSize = l.big ? 48 : 32;
         const imgY = l.y - imgSize - 20;
 
-        // Try to get cached image if not loaded yet
-        if (!l.imgLoaded && l.collection) {
-          const cachedKeys = Array.from(imageCache.keys());
-          for (const key of cachedKeys) {
-            if (imageCache.has(key)) {
-              // Check if this label should have an image
-              // Images load async, so check cache on each frame
-            }
-          }
-        }
+        // Look up image from cache
+        const img = l.imageUrl ? imageCache.get(l.imageUrl) : undefined;
+        const hasImg = img && img.complete && img.naturalWidth > 0;
 
-        // Check image cache for any matching image
-        if (!l.image) {
-          for (const [, img] of imageCache) {
-            if (img.complete && img.naturalWidth > 0) {
-              // Just try to find any loaded image for this label
-              break;
-            }
-          }
-        }
-
-        if (l.image && l.image.complete && l.image.naturalWidth > 0) {
+        if (hasImg) {
           ctx!.globalAlpha = a * 0.85;
           ctx!.save();
 
@@ -253,7 +245,7 @@ const NFTCanvas = () => {
           ctx!.closePath();
           ctx!.clip();
 
-          ctx!.drawImage(l.image, ix, iy, imgSize, imgSize);
+          ctx!.drawImage(img, ix, iy, imgSize, imgSize);
           ctx!.restore();
 
           // Glow border
