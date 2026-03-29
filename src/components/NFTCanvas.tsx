@@ -2,7 +2,6 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useNFTSales, type NFTSale } from '@/hooks/useNFTSales';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 function proxyImageUrl(url: string): string {
   return `${SUPABASE_URL}/functions/v1/image-proxy?url=${encodeURIComponent(url)}`;
