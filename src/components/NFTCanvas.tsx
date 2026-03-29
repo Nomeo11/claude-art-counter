@@ -67,7 +67,7 @@ function loadImage(url: string): HTMLImageElement | null {
   return null;
 }
 
-const NFTCanvas = () => {
+const NFTCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
   const labelsRef = useRef<SaleLabel[]>([]);
