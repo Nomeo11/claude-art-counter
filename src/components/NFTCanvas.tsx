@@ -59,40 +59,59 @@ const NFTCanvas: React.FC = () => {
   const totalRef = useRef(0);
   const frameRef = useRef(0);
 
+  // Track per-column card count for stacking
+  const colCountRef = useRef<Record<number, number>>({ 0: 0, 1: 0, 2: 0 });
+
   const handleSale = useCallback((sale: NFTSale) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const W = canvas.width;
     const H = canvas.height;
 
     // Pre-load image
     if (sale.image) loadImage(sale.image);
 
-    const CARD_W = 140;
-    const cols = Math.floor((W - 40) / (CARD_W + 16));
-    const totalCards = cardsRef.current.length;
-    const col = totalCards % Math.max(cols, 3);
-    const xPos = 30 + col * (CARD_W + 16) + Math.random() * 10;
+    const colIdx = CHAIN_ORDER.indexOf(sale.chain);
+    const column = colIdx >= 0 ? colIdx : 0;
+
+    // Stack cards within column
+    const HEADER_Y = 80;
+    const CARD_H_TOTAL = 190;
+    const maxVisible = Math.floor((H - HEADER_Y - 40) / (CARD_H_TOTAL + 10));
+
+    // Count existing cards in this column
+    const colCards = cardsRef.current.filter(c => c.column === column);
+    const slot = colCards.length % Math.max(maxVisible, 2);
+    const targetY = HEADER_Y + slot * (CARD_H_TOTAL + 10);
 
     cardsRef.current.push({
       sale,
-      x: xPos,
+      x: 0, // will be computed in render based on column
       y: -200,
-      targetY: 70 + Math.random() * (H - 280),
+      targetY,
       opacity: 0,
       scale: 0.8,
       loaded: false,
       img: null,
       born: Date.now(),
+      column,
     });
 
     statsRef.current[sale.chain] = (statsRef.current[sale.chain] || 0) + 1;
     totalRef.current++;
 
-    // Remove old cards to keep things flowing
-    if (cardsRef.current.length > 30) {
-      cardsRef.current = cardsRef.current.slice(-24);
+    // Remove oldest cards per column to keep flowing
+    const perCol = [
+      cardsRef.current.filter(c => c.column === 0),
+      cardsRef.current.filter(c => c.column === 1),
+      cardsRef.current.filter(c => c.column === 2),
+    ];
+    for (let ci = 0; ci < 3; ci++) {
+      if (perCol[ci].length > Math.max(maxVisible, 3)) {
+        const oldest = perCol[ci][0];
+        const idx = cardsRef.current.indexOf(oldest);
+        if (idx >= 0) cardsRef.current.splice(idx, 1);
+      }
     }
   }, []);
 
