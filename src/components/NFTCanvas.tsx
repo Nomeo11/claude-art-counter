@@ -54,13 +54,19 @@ function getColor(marketplace: string) {
 const imageCache = new Map<string, HTMLImageElement>();
 
 function loadImage(url: string): HTMLImageElement | null {
-  if (imageCache.has(url)) return imageCache.get(url)!;
+  const proxied = proxyImageUrl(url);
+  if (imageCache.has(url)) {
+    const cached = imageCache.get(url)!;
+    if (cached.complete && cached.naturalWidth > 0) return cached;
+    return null;
+  }
   const img = new Image();
   img.crossOrigin = 'anonymous';
-  img.src = url;
+  img.src = proxied;
   img.onload = () => imageCache.set(url, img);
-  img.onerror = () => {}; // silently fail
-  return null; // not loaded yet
+  img.onerror = () => {};
+  imageCache.set(url, img); // store early so we don't re-request
+  return null;
 }
 
 const NFTCanvas = () => {
