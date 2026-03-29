@@ -53,7 +53,7 @@ serve(async (req) => {
 
     for (const tryUrl of urls) {
       try {
-        const res = await fetchWithTimeout(tryUrl, 8000);
+        const res = await fetchWithTimeout(tryUrl, 3000);
         if (res.ok) {
           const contentType = res.headers.get('content-type') || 'image/png';
           const body = await res.arrayBuffer();
