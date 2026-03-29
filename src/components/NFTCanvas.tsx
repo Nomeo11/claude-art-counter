@@ -18,7 +18,11 @@ interface SaleCard {
   loaded: boolean;
   img: HTMLImageElement | null;
   born: number;
+  column: number; // which chain column: 0=eth, 1=sol, 2=tez
 }
+
+const CHAIN_ORDER = ['ethereum', 'solana', 'tezos'];
+const CHAIN_LABELS = ['ETHEREUM', 'SOLANA', 'TEZOS'];
 
 const CHAIN_COLORS: Record<string, string> = {
   ethereum: '#627EEA',
@@ -55,40 +59,59 @@ const NFTCanvas: React.FC = () => {
   const totalRef = useRef(0);
   const frameRef = useRef(0);
 
+  // Track per-column card count for stacking
+  const colCountRef = useRef<Record<number, number>>({ 0: 0, 1: 0, 2: 0 });
+
   const handleSale = useCallback((sale: NFTSale) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const W = canvas.width;
     const H = canvas.height;
 
     // Pre-load image
     if (sale.image) loadImage(sale.image);
 
-    const CARD_W = 140;
-    const cols = Math.floor((W - 40) / (CARD_W + 16));
-    const totalCards = cardsRef.current.length;
-    const col = totalCards % Math.max(cols, 3);
-    const xPos = 30 + col * (CARD_W + 16) + Math.random() * 10;
+    const colIdx = CHAIN_ORDER.indexOf(sale.chain);
+    const column = colIdx >= 0 ? colIdx : 0;
+
+    // Stack cards within column
+    const HEADER_Y = 80;
+    const CARD_H_TOTAL = 190;
+    const maxVisible = Math.floor((H - HEADER_Y - 40) / (CARD_H_TOTAL + 10));
+
+    // Count existing cards in this column
+    const colCards = cardsRef.current.filter(c => c.column === column);
+    const slot = colCards.length % Math.max(maxVisible, 2);
+    const targetY = HEADER_Y + slot * (CARD_H_TOTAL + 10);
 
     cardsRef.current.push({
       sale,
-      x: xPos,
+      x: 0, // will be computed in render based on column
       y: -200,
-      targetY: 70 + Math.random() * (H - 280),
+      targetY,
       opacity: 0,
       scale: 0.8,
       loaded: false,
       img: null,
       born: Date.now(),
+      column,
     });
 
     statsRef.current[sale.chain] = (statsRef.current[sale.chain] || 0) + 1;
     totalRef.current++;
 
-    // Remove old cards to keep things flowing
-    if (cardsRef.current.length > 30) {
-      cardsRef.current = cardsRef.current.slice(-24);
+    // Remove oldest cards per column to keep flowing
+    const perCol = [
+      cardsRef.current.filter(c => c.column === 0),
+      cardsRef.current.filter(c => c.column === 1),
+      cardsRef.current.filter(c => c.column === 2),
+    ];
+    for (let ci = 0; ci < 3; ci++) {
+      if (perCol[ci].length > Math.max(maxVisible, 3)) {
+        const oldest = perCol[ci][0];
+        const idx = cardsRef.current.indexOf(oldest);
+        if (idx >= 0) cardsRef.current.splice(idx, 1);
+      }
     }
   }, []);
 
@@ -128,30 +151,82 @@ const NFTCanvas: React.FC = () => {
       const W = canvas!.width;
       const H = canvas!.height;
 
-      // Dark background with slight fade for trailing effect
-      ctx!.fillStyle = 'rgba(8, 8, 12, 0.15)';
+      // Full clear every frame for clean columns
+      ctx!.fillStyle = '#08080C';
       ctx!.fillRect(0, 0, W, H);
 
-      // Every 60 frames, do a full clear to prevent ghosting
-      if (frameRef.current % 60 === 0) {
-        ctx!.fillStyle = '#08080C';
-        ctx!.fillRect(0, 0, W, H);
+      // Column layout
+      const COL_GAP = 12;
+      const SIDE_PAD = 16;
+      const colW = (W - SIDE_PAD * 2 - COL_GAP * 2) / 3;
+      const HEADER_Y = 70;
+
+      // Draw column headers + dividers
+      for (let ci = 0; ci < 3; ci++) {
+        const colX = SIDE_PAD + ci * (colW + COL_GAP);
+        const chainColor = CHAIN_COLORS[CHAIN_ORDER[ci]];
+        const count = statsRef.current[CHAIN_ORDER[ci]] || 0;
+
+        // Column header background
+        ctx!.fillStyle = 'rgba(255,255,255,0.03)';
+        drawRoundedRect(colX, 8, colW, 52, 6);
+        ctx!.fill();
+
+        // Chain name
+        ctx!.textAlign = 'left';
+        ctx!.font = '700 13px "Space Mono", monospace';
+        ctx!.fillStyle = chainColor;
+        ctx!.globalAlpha = 0.9;
+        ctx!.fillText(CHAIN_LABELS[ci], colX + 12, 32);
+
+        // Count
+        ctx!.textAlign = 'right';
+        ctx!.font = '700 18px "Space Mono", monospace';
+        ctx!.fillStyle = chainColor;
+        ctx!.globalAlpha = 0.7;
+        ctx!.fillText(count.toLocaleString(), colX + colW - 12, 35);
+
+        // Subtitle
+        ctx!.textAlign = 'left';
+        ctx!.font = '400 8px "Space Mono", monospace';
+        ctx!.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx!.globalAlpha = 1;
+        ctx!.fillText(`${CHAIN_SYMBOLS[CHAIN_ORDER[ci]]} LIVE SALES`, colX + 12, 48);
+
+        // Divider line
+        if (ci < 2) {
+          const divX = colX + colW + COL_GAP / 2;
+          ctx!.strokeStyle = 'rgba(255,255,255,0.06)';
+          ctx!.lineWidth = 1;
+          ctx!.beginPath();
+          ctx!.moveTo(divX, 8);
+          ctx!.lineTo(divX, H - 30);
+          ctx!.stroke();
+        }
       }
 
+      // Draw cards
       const cards = cardsRef.current;
       const now = Date.now();
+      const CARD_PAD = 8;
+      const CARD_W = colW - CARD_PAD * 2;
+      const IMG_H = Math.min(CARD_W * 0.85, 110);
+      const CARD_H = IMG_H + 56;
 
       for (let i = cards.length - 1; i >= 0; i--) {
         const c = cards[i];
         const age = (now - c.born) / 1000;
 
-        // Animate in
-        c.y += (c.targetY - c.y) * 0.06;
-        c.opacity = Math.min(c.opacity + 0.04, age > 12 ? Math.max(0, c.opacity - 0.02) : 1);
-        c.scale = Math.min(c.scale + 0.015, 1);
+        // Compute x from column
+        const colX = SIDE_PAD + c.column * (colW + COL_GAP) + CARD_PAD;
+        c.x = colX;
 
-        // Remove faded cards
-        if (c.opacity <= 0 && age > 12) {
+        // Animate
+        c.y += (c.targetY - c.y) * 0.08;
+        c.opacity = Math.min(c.opacity + 0.05, age > 15 ? Math.max(0, c.opacity - 0.03) : 1);
+        c.scale = Math.min(c.scale + 0.02, 1);
+
+        if (c.opacity <= 0 && age > 15) {
           cards.splice(i, 1);
           continue;
         }
@@ -168,9 +243,6 @@ const NFTCanvas: React.FC = () => {
 
         const chainColor = CHAIN_COLORS[c.sale.chain] || '#888';
         const symbol = CHAIN_SYMBOLS[c.sale.chain] || '';
-        const CARD_W = 140;
-        const IMG_H = 120;
-        const CARD_H = IMG_H + 60;
 
         ctx!.save();
         ctx!.globalAlpha = c.opacity;
@@ -178,19 +250,18 @@ const NFTCanvas: React.FC = () => {
         ctx!.scale(c.scale, c.scale);
         ctx!.translate(-(c.x + CARD_W / 2), -(c.y + CARD_H / 2));
 
-        // Card background
+        // Card bg
         drawRoundedRect(c.x, c.y, CARD_W, CARD_H, 8);
-        ctx!.fillStyle = 'rgba(20, 20, 28, 0.9)';
+        ctx!.fillStyle = 'rgba(18, 18, 26, 0.95)';
         ctx!.fill();
 
-        // Border glow
+        // Border
         ctx!.strokeStyle = chainColor;
-        ctx!.lineWidth = 1.5;
-        ctx!.shadowColor = chainColor;
-        ctx!.shadowBlur = 8;
+        ctx!.lineWidth = 1;
+        ctx!.globalAlpha = c.opacity * 0.5;
         drawRoundedRect(c.x, c.y, CARD_W, CARD_H, 8);
         ctx!.stroke();
-        ctx!.shadowBlur = 0;
+        ctx!.globalAlpha = c.opacity;
 
         // Image
         if (c.img) {
@@ -200,43 +271,26 @@ const NFTCanvas: React.FC = () => {
           ctx!.drawImage(c.img, c.x + 4, c.y + 4, CARD_W - 8, IMG_H - 4);
           ctx!.restore();
         } else {
-          // Placeholder
-          ctx!.fillStyle = 'rgba(40, 40, 55, 0.8)';
+          ctx!.fillStyle = 'rgba(35, 35, 50, 0.8)';
           drawRoundedRect(c.x + 4, c.y + 4, CARD_W - 8, IMG_H - 4, 6);
           ctx!.fill();
-          ctx!.fillStyle = 'rgba(255,255,255,0.15)';
-          ctx!.font = '400 10px "Space Mono", monospace';
+          ctx!.fillStyle = 'rgba(255,255,255,0.12)';
+          ctx!.font = '400 9px "Space Mono", monospace';
           ctx!.textAlign = 'center';
           ctx!.fillText('Loading...', c.x + CARD_W / 2, c.y + IMG_H / 2);
         }
 
-        // Chain badge
-        const badgeW = 46;
-        const badgeH = 14;
-        const badgeX = c.x + CARD_W - badgeW - 6;
-        const badgeY = c.y + 8;
-        ctx!.fillStyle = chainColor;
-        ctx!.globalAlpha = c.opacity * 0.85;
-        drawRoundedRect(badgeX, badgeY, badgeW, badgeH, 3);
-        ctx!.fill();
-        ctx!.globalAlpha = c.opacity;
-        ctx!.fillStyle = '#fff';
-        ctx!.font = '700 8px "Space Mono", monospace';
-        ctx!.textAlign = 'center';
-        ctx!.fillText(c.sale.chain.toUpperCase().slice(0, 5), badgeX + badgeW / 2, badgeY + 10);
-
-        // Collection name
+        // Collection
         ctx!.textAlign = 'left';
         ctx!.font = '400 9px "Space Mono", monospace';
-        ctx!.fillStyle = 'rgba(255,255,255,0.75)';
-        const colName = c.sale.collection.length > 18 ? c.sale.collection.slice(0, 16) + '…' : c.sale.collection;
-        ctx!.fillText(colName, c.x + 8, c.y + IMG_H + 16);
+        ctx!.fillStyle = 'rgba(255,255,255,0.7)';
+        const maxChars = Math.floor(CARD_W / 7);
+        const colName = c.sale.collection.length > maxChars ? c.sale.collection.slice(0, maxChars - 1) + '…' : c.sale.collection;
+        ctx!.fillText(colName, c.x + 8, c.y + IMG_H + 14);
 
         // Price
-        ctx!.font = '700 13px "Space Mono", monospace';
+        ctx!.font = '700 12px "Space Mono", monospace';
         ctx!.fillStyle = chainColor;
-        ctx!.shadowColor = chainColor;
-        ctx!.shadowBlur = 6;
         const priceStr = c.sale.price < 0.01
           ? `${symbol} ${c.sale.price.toFixed(4)}`
           : c.sale.price >= 100
@@ -244,69 +298,23 @@ const NFTCanvas: React.FC = () => {
             : c.sale.price >= 1
               ? `${symbol} ${c.sale.price.toFixed(2)}`
               : `${symbol} ${c.sale.price.toFixed(3)}`;
-        ctx!.fillText(priceStr, c.x + 8, c.y + IMG_H + 34);
-        ctx!.shadowBlur = 0;
+        ctx!.fillText(priceStr, c.x + 8, c.y + IMG_H + 30);
 
         // Marketplace
         ctx!.font = '400 7px "Space Mono", monospace';
-        ctx!.fillStyle = 'rgba(255,255,255,0.35)';
-        ctx!.fillText(c.sale.marketplace, c.x + 8, c.y + IMG_H + 48);
+        ctx!.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx!.fillText(c.sale.marketplace, c.x + 8, c.y + IMG_H + 44);
 
         ctx!.restore();
       }
 
-      ctx!.globalAlpha = 1;
-
-      // ─── HUD ───
-      // Title
-      ctx!.textAlign = 'left';
-      ctx!.font = '700 16px "Space Mono", monospace';
-      ctx!.fillStyle = '#ffffff';
-      ctx!.globalAlpha = 0.9;
-      ctx!.fillText('NFT LIVE SALES', 24, 36);
-
-      ctx!.font = '400 9px "Space Mono", monospace';
-      ctx!.globalAlpha = 0.4;
-      ctx!.fillText('ETHEREUM  ·  SOLANA  ·  TEZOS', 24, 52);
-
-      // Total
-      ctx!.textAlign = 'right';
-      ctx!.font = '700 28px "Space Mono", monospace';
-      ctx!.fillStyle = '#ffffff';
-      ctx!.globalAlpha = 0.8;
-      ctx!.fillText(totalRef.current.toLocaleString(), W - 24, 40);
-
-      ctx!.font = '400 9px "Space Mono", monospace';
-      ctx!.globalAlpha = 0.35;
-      ctx!.fillText('SALES TRACKED', W - 24, 54);
-
-      // Chain stats
-      const chains = [
-        { key: 'ethereum', label: 'ETH', color: CHAIN_COLORS.ethereum },
-        { key: 'solana', label: 'SOL', color: CHAIN_COLORS.solana },
-        { key: 'tezos', label: 'XTZ', color: CHAIN_COLORS.tezos },
-      ];
-      ctx!.textAlign = 'right';
-      let sx = W - 24;
-      for (const ch of chains.reverse()) {
-        const count = statsRef.current[ch.key] || 0;
-        ctx!.globalAlpha = 0.7;
-        ctx!.font = '400 9px "Space Mono", monospace';
-        ctx!.fillStyle = '#fff';
-        ctx!.fillText(`${count}`, sx, 70);
-        sx -= 30;
-        ctx!.fillStyle = ch.color;
-        ctx!.font = '700 9px "Space Mono", monospace';
-        ctx!.fillText(ch.label, sx, 70);
-        sx -= 50;
-      }
-
       // Footer
+      ctx!.globalAlpha = 1;
       ctx!.textAlign = 'center';
-      ctx!.font = '400 9px "Space Mono", monospace';
+      ctx!.font = '400 8px "Space Mono", monospace';
       ctx!.fillStyle = '#ffffff';
       ctx!.globalAlpha = 0.2;
-      ctx!.fillText('MULTI-CHAIN NFT SALES  ·  LIVE DATA', W / 2, H - 12);
+      ctx!.fillText(`${totalRef.current} SALES TRACKED  ·  MULTI-CHAIN LIVE DATA`, W / 2, H - 10);
 
       ctx!.globalAlpha = 1;
       animId = requestAnimationFrame(loop);
