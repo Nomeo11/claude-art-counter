@@ -70,10 +70,28 @@ function SaleCard({ sale }: { sale: NFTSale }) {
       </div>
 
       {/* Info */}
-      <div style={{ padding: '8px 10px 10px' }}>
+      <div style={{ padding: '10px 12px 12px' }}>
+        {/* Marketplace badge */}
+        <div style={{
+          display: 'inline-block',
+          padding: '3px 8px',
+          borderRadius: 4,
+          background: `${config.color}22`,
+          border: `1px solid ${config.color}44`,
+          fontFamily: '"Space Mono", monospace',
+          fontSize: 11,
+          fontWeight: 700,
+          color: config.color,
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+          marginBottom: 6,
+        }}>
+          {sale.marketplace}
+        </div>
+
         <div style={{
           fontFamily: '"Space Mono", monospace',
-          fontSize: 10,
+          fontSize: 11,
           color: 'rgba(255,255,255,0.65)',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
@@ -84,21 +102,20 @@ function SaleCard({ sale }: { sale: NFTSale }) {
         </div>
         <div style={{
           fontFamily: '"Space Mono", monospace',
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: 700,
           color: config.color,
           textShadow: `0 0 8px ${config.glow}`,
-          marginBottom: 2,
+          marginBottom: 4,
         }}>
           {formatPrice(sale.price, config.symbol)}
         </div>
         <div style={{
           fontFamily: '"Space Mono", monospace',
-          fontSize: 8,
-          color: 'rgba(255,255,255,0.3)',
-          textTransform: 'uppercase',
+          fontSize: 9,
+          color: 'rgba(255,255,255,0.35)',
         }}>
-          {sale.marketplace}
+          {new Date(sale.timestamp).toLocaleTimeString()}
         </div>
       </div>
     </div>
