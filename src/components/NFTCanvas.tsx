@@ -220,28 +220,11 @@ const NFTCanvas = () => {
         const imgSize = l.big ? 48 : 32;
         const imgY = l.y - imgSize - 20;
 
-        // Try to get cached image if not loaded yet
-        if (!l.imgLoaded && l.collection) {
-          const cachedKeys = Array.from(imageCache.keys());
-          for (const key of cachedKeys) {
-            if (imageCache.has(key)) {
-              // Check if this label should have an image
-              // Images load async, so check cache on each frame
-            }
-          }
-        }
+        // Look up image from cache
+        const img = l.imageUrl ? imageCache.get(l.imageUrl) : undefined;
+        const hasImg = img && img.complete && img.naturalWidth > 0;
 
-        // Check image cache for any matching image
-        if (!l.image) {
-          for (const [, img] of imageCache) {
-            if (img.complete && img.naturalWidth > 0) {
-              // Just try to find any loaded image for this label
-              break;
-            }
-          }
-        }
-
-        if (l.image && l.image.complete && l.image.naturalWidth > 0) {
+        if (hasImg) {
           ctx!.globalAlpha = a * 0.85;
           ctx!.save();
 
@@ -263,7 +246,7 @@ const NFTCanvas = () => {
           ctx!.closePath();
           ctx!.clip();
 
-          ctx!.drawImage(l.image, ix, iy, imgSize, imgSize);
+          ctx!.drawImage(img, ix, iy, imgSize, imgSize);
           ctx!.restore();
 
           // Glow border
