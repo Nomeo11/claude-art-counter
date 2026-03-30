@@ -480,6 +480,38 @@ const NFTLiveView = () => {
         })}
       </div>
 
+      {/* Whale swim overlay */}
+      {whaleSwim && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          pointerEvents: 'none',
+          zIndex: 50,
+          overflow: 'hidden',
+        }}>
+          <video
+            src="/whale-swim.mp4"
+            autoPlay
+            muted
+            playsInline
+            style={{
+              position: 'absolute',
+              width: 280,
+              height: 280,
+              mixBlendMode: 'screen',
+              animation: 'whale-swim-across 3s linear forwards',
+              opacity: 0.85,
+            }}
+          />
+          <style>{`
+            @keyframes whale-swim-across {
+              0% { bottom: -10%; left: -15%; top: auto; right: auto; transform: translate(0, 0) scaleX(-1); }
+              100% { bottom: auto; top: -15%; left: 100%; transform: translate(0, 0) scaleX(-1); }
+            }
+          `}</style>
+        </div>
+      )}
+
       {/* Chart overlay */}
       {showChart && <LiveSalesChart stats={stats} onClose={() => setShowChart(false)} />}
 
