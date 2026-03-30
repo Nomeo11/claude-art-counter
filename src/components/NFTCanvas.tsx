@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNFTSales, type NFTSale } from '@/hooks/useNFTSales';
 import { Volume2, VolumeX, BarChart3 } from 'lucide-react';
-import logoImg from '@/assets/logo.png';
+import logoImg from '@/assets/cc-logo.png';
 import PriceTicker from './PriceTicker';
 import LiveSalesChart from './LiveSalesChart';
 
