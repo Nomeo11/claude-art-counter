@@ -206,15 +206,13 @@ const NFTLiveView = () => {
     }
   }, [muted]);
 
+  // Cleanup bg audio on unmount
   useEffect(() => {
-    const bgAudio = new Audio('/sounds/bg-loop.wav');
-    bgAudio.loop = true;
-    bgAudio.volume = 0.35;
-    bgAudioRef.current = bgAudio;
-    bgAudio.play().catch(() => {});
-
     return () => {
-      bgAudio.pause();
+      if (bgAudioRef.current) {
+        bgAudioRef.current.pause();
+        bgAudioRef.current = null;
+      }
     };
   }, []);
 
@@ -294,6 +292,17 @@ const NFTLiveView = () => {
         countdownAudioRef.current.pause();
         countdownAudioRef.current = null;
       }
+    }
+  }, [countdown]);
+
+  // Start bg music only after countdown ends
+  useEffect(() => {
+    if (countdown === null && !bgAudioRef.current) {
+      const bgAudio = new Audio('/sounds/bg-loop.wav');
+      bgAudio.loop = true;
+      bgAudio.volume = 0.35;
+      bgAudioRef.current = bgAudio;
+      if (!mutedRef.current) bgAudio.play().catch(() => {});
     }
   }, [countdown]);
 
