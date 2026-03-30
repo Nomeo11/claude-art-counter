@@ -491,7 +491,7 @@ const NFTLiveView = () => {
           background: 'transparent',
         }}>
           <video
-            src="/whale-swim.mp4"
+            src="/whale-swim.webm"
             autoPlay
             muted
             playsInline
@@ -501,8 +501,6 @@ const NFTLiveView = () => {
               height: 320,
               bottom: 0,
               left: -320,
-              mixBlendMode: 'screen',
-              filter: 'brightness(2) contrast(1.5)',
               animation: 'whale-swim-across 4.5s ease-in-out forwards',
             }}
           />
