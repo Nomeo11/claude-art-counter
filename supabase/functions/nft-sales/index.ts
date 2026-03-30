@@ -10,38 +10,32 @@ const ALCHEMY_BASE = 'https://eth-mainnet.g.alchemy.com/nft/v3/demo';
 const SOLANA_COLLECTIONS = [
   'mad_lads', 'degods', 'okay_bears', 'famous_fox_federation',
   'solana_monkey_business', 'tensorians', 'claynosaurz',
+  'sharky_fi', 'degenerate_ape_academy', 'aurory',
+  'cets_on_creck', 'primates', 'blocksmith_labs',
+  'abc_abracadabra', 'lifinity_flares', 'smb_gen2',
+  'boogles', 'gothic_degens', 'galactic_geckos',
+  'shadowy_super_coder_dao',
 ];
 
 function normalizeTezosMediaUrl(url?: string): string {
   if (!url) return '';
-
   const trimmed = url.trim();
   if (!trimmed) return '';
-
-  if (trimmed.startsWith('ipfs://ipfs/')) {
-    return `https://ipfs.io/ipfs/${trimmed.replace('ipfs://ipfs/', '')}`;
-  }
-
-  if (trimmed.startsWith('ipfs://')) {
-    return `https://ipfs.io/ipfs/${trimmed.replace('ipfs://', '')}`;
-  }
-
-  if (trimmed.startsWith('/ipfs/')) {
-    return `https://ipfs.io${trimmed}`;
-  }
-
+  if (trimmed.startsWith('ipfs://ipfs/')) return `https://ipfs.io/ipfs/${trimmed.replace('ipfs://ipfs/', '')}`;
+  if (trimmed.startsWith('ipfs://')) return `https://ipfs.io/ipfs/${trimmed.replace('ipfs://', '')}`;
+  if (trimmed.startsWith('/ipfs/')) return `https://ipfs.io${trimmed}`;
   return trimmed;
 }
 
 function getTezosImageCandidates(token: any): string[] {
-  // Prefer display_uri (smaller/web-optimized) then thumbnail, then artifact (can be huge GIFs)
   return Array.from(new Set([
-    normalizeTezosMediaUrl(token?.display_uri),
-    normalizeTezosMediaUrl(token?.thumbnail_uri),
-    normalizeTezosMediaUrl(token?.artifact_uri),
+    normalizeTezosMediaUrl(token?.display_uri || token?.displayUri),
+    normalizeTezosMediaUrl(token?.thumbnail_uri || token?.thumbnailUri),
+    normalizeTezosMediaUrl(token?.artifact_uri || token?.artifactUri),
   ].filter(Boolean)));
 }
 
+// ─── Ethereum (Alchemy demo) ───
 async function fetchEthSales(pageKey?: string): Promise<any[]> {
   try {
     const url = `${ALCHEMY_BASE}/getNFTSales?fromBlock=0&toBlock=latest&limit=10&order=desc${pageKey ? `&pageKey=${pageKey}` : ''}`;
@@ -74,17 +68,23 @@ async function fetchEthSales(pageKey?: string): Promise<any[]> {
   } catch { return []; }
 }
 
+// ─── Solana (MagicEden — expanded collections) ───
 async function fetchSolanaSales(): Promise<any[]> {
   try {
-    const col = SOLANA_COLLECTIONS[Math.floor(Math.random() * SOLANA_COLLECTIONS.length)];
-    const res = await fetch(`https://api-mainnet.magiceden.dev/v2/collections/${col}/activities?type=buyNow&limit=10`, {
-      headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    if (!Array.isArray(data)) return [];
+    // Pick 3 random collections to spread coverage
+    const shuffled = [...SOLANA_COLLECTIONS].sort(() => Math.random() - 0.5);
+    const picks = shuffled.slice(0, 3);
 
-    return data.map((s: any) => ({
+    const requests = picks.map(col =>
+      fetch(`https://api-mainnet.magiceden.dev/v2/collections/${col}/activities?type=buyNow&limit=5`, {
+        headers: { Accept: 'application/json' },
+      }).then(r => r.ok ? r.json() : []).catch(() => [])
+    );
+    const results = await Promise.all(requests);
+    const data = results.flat().filter(Array.isArray(results) ? Boolean : () => false);
+    const allActivities = results.flatMap(r => Array.isArray(r) ? r : []);
+
+    return allActivities.map((s: any) => ({
       id: `sol-${s.signature}`,
       collection: s.collectionSymbol?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) || 'Unknown',
       tokenName: s.tokenMint ? `#${s.tokenMint.slice(0, 6)}` : 'Unknown',
@@ -97,6 +97,7 @@ async function fetchSolanaSales(): Promise<any[]> {
   } catch { return []; }
 }
 
+// ─── Tezos: Objkt ───
 async function fetchTezosSales(): Promise<any[]> {
   try {
     const query = `{
@@ -121,7 +122,7 @@ async function fetchTezosSales(): Promise<any[]> {
       const mediaType = typeof token?.mime === 'string' ? token.mime.toLowerCase() : '';
       const creatorAlias = token?.creators?.[0]?.holder?.alias || '';
       return {
-        id: `tez-${e.timestamp}-${i}`,
+        id: `tez-objkt-${e.timestamp}-${i}`,
         collection: token.name || 'Tezos NFT',
         tokenName: token.name || 'Unknown',
         artist: creatorAlias,
@@ -134,6 +135,103 @@ async function fetchTezosSales(): Promise<any[]> {
         mediaType: mediaType || undefined,
       };
     }).filter((s: any) => s.price > 0 && s.imageCandidates.length > 0);
+  } catch { return []; }
+}
+
+// ─── Tezos: fx(hash) ───
+async function fetchFxhashSales(): Promise<any[]> {
+  try {
+    const query = `{
+      actions(
+        filters: { type_in: [LISTING_V3_ACCEPTED, LISTING_V2_ACCEPTED, LISTING_V1_ACCEPTED] }
+        take: 10
+      ) {
+        id
+        type
+        numericValue
+        createdAt
+        token {
+          name
+          thumbnailUri
+          displayUri
+          author { name }
+        }
+      }
+    }`;
+    const res = await fetch('https://api.fxhash.xyz/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const actions = data?.data?.actions || [];
+
+    return actions.map((a: any) => {
+      const token = a.token || {};
+      const imageCandidates = getTezosImageCandidates(token);
+      return {
+        id: `tez-fxhash-${a.id}`,
+        collection: token.name || 'fx(hash) NFT',
+        tokenName: token.name || 'Unknown',
+        artist: token.author?.name || '',
+        price: (a.numericValue || 0) / 1_000_000,
+        currency: 'XTZ',
+        chain: 'tezos',
+        marketplace: 'FX(HASH)',
+        image: imageCandidates[0] || '',
+        imageCandidates,
+      };
+    }).filter((s: any) => s.price > 0 && s.imageCandidates.length > 0);
+  } catch { return []; }
+}
+
+// ─── Rarible (multi-chain) — requires API key ───
+async function fetchRaribleSales(): Promise<any[]> {
+  const apiKey = Deno.env.get('RARIBLE_API_KEY');
+  if (!apiKey) return [];
+
+  try {
+    const res = await fetch('https://api.rarible.org/v0.1/activities/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': apiKey,
+      },
+      body: JSON.stringify({
+        types: ['SELL'],
+        size: 10,
+        sort: 'LATEST',
+      }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const activities = data?.activities || [];
+
+    return activities.map((a: any) => {
+      const nft = a.nft || {};
+      const priceValue = parseFloat(a.price || '0');
+      // Determine chain from the ID prefix
+      const idPrefix = (a.id || '').split(':')[0]?.toUpperCase();
+      let chain = 'ethereum';
+      let currency = 'ETH';
+      if (idPrefix === 'SOLANA') { chain = 'solana'; currency = 'SOL'; }
+      else if (idPrefix === 'TEZOS') { chain = 'tezos'; currency = 'XTZ'; }
+      else if (idPrefix === 'POLYGON') { chain = 'ethereum'; currency = 'MATIC'; }
+
+      const image = nft.type?.meta?.content?.find((c: any) => c.representation === 'PREVIEW' || c.representation === 'ORIGINAL')?.url || '';
+
+      return {
+        id: `rarible-${a.id}`,
+        collection: nft.type?.meta?.name || 'Unknown',
+        tokenName: nft.type?.meta?.name || 'Unknown',
+        price: priceValue,
+        currency,
+        chain,
+        marketplace: 'RARIBLE',
+        image,
+      };
+    }).filter((s: any) => s.price > 0);
   } catch { return []; }
 }
 
@@ -150,19 +248,24 @@ serve(async (req) => {
     let sales: any[] = [];
 
     if (chain === 'all') {
-      const [eth, sol, tez] = await Promise.all([
+      const [eth, sol, tez, fxhash, rarible] = await Promise.all([
         fetchEthSales(pageKey),
         fetchSolanaSales(),
         fetchTezosSales(),
+        fetchFxhashSales(),
+        fetchRaribleSales(),
       ]);
-      sales = [...eth, ...sol, ...tez];
+      sales = [...eth, ...sol, ...tez, ...fxhash, ...rarible];
       sales.sort(() => Math.random() - 0.5);
     } else if (chain === 'ethereum') {
-      sales = await fetchEthSales(pageKey);
+      const [eth, rarible] = await Promise.all([fetchEthSales(pageKey), fetchRaribleSales()]);
+      sales = [...eth, ...rarible.filter(s => s.chain === 'ethereum')];
     } else if (chain === 'solana') {
-      sales = await fetchSolanaSales();
+      const [sol, rarible] = await Promise.all([fetchSolanaSales(), fetchRaribleSales()]);
+      sales = [...sol, ...rarible.filter(s => s.chain === 'solana')];
     } else if (chain === 'tezos') {
-      sales = await fetchTezosSales();
+      const [tez, fxhash] = await Promise.all([fetchTezosSales(), fetchFxhashSales()]);
+      sales = [...tez, ...fxhash];
     }
 
     return new Response(JSON.stringify({ sales }), {
