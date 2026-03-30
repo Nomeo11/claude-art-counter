@@ -37,8 +37,49 @@ function getTezosImageCandidates(token: any): string[] {
   ].filter(Boolean)));
 }
 
-// ─── Ethereum (Alchemy demo) ───
-async function fetchEthSales(pageKey?: string): Promise<any[]> {
+// ─── Ethereum: Reservoir (OpenSea, Blur, LooksRare, Sudoswap, etc.) ───
+async function fetchEthSalesReservoir(): Promise<any[]> {
+  try {
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    const reservoirKey = Deno.env.get('RESERVOIR_API_KEY');
+    if (reservoirKey) headers['x-api-key'] = reservoirKey;
+
+    const res = await fetch(`${RESERVOIR_BASE}/sales/v6?limit=15&sortBy=time`, { headers });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.error(`Reservoir API ${res.status}: ${errText.slice(0, 200)}`);
+      return [];
+    }
+    const data = await res.json();
+    const sales = data?.sales || [];
+
+    return sales.map((s: any) => {
+      const price = s.price?.amount?.native || 0;
+      const currency = s.price?.currency?.symbol || 'ETH';
+      const marketplace = (s.orderSource || s.fillSource || 'unknown').replace('.io', '').replace('.xyz', '').toUpperCase();
+      const image = s.token?.image || '';
+      const collection = s.token?.collection?.name || 'Unknown';
+      const tokenName = s.token?.name || `#${s.token?.tokenId || '?'}`;
+
+      return {
+        id: `reservoir-${s.id || s.txHash}`,
+        collection,
+        tokenName,
+        price,
+        currency: currency.toUpperCase(),
+        chain: 'ethereum',
+        marketplace,
+        image,
+      };
+    }).filter((s: any) => s.price > 0);
+  } catch (e) {
+    console.error('Reservoir fetch error:', e);
+    return [];
+  }
+}
+
+// ─── Ethereum fallback: Alchemy getNFTSales (historical) ───
+async function fetchEthSalesAlchemy(pageKey?: string): Promise<any[]> {
   try {
     const url = `${ALCHEMY_BASE}/getNFTSales?fromBlock=0&toBlock=latest&limit=10&order=desc${pageKey ? `&pageKey=${pageKey}` : ''}`;
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -68,6 +109,15 @@ async function fetchEthSales(pageKey?: string): Promise<any[]> {
       };
     }).filter((s: any) => s.price > 0);
   } catch { return []; }
+}
+
+// Combined Ethereum fetch: Reservoir primary, Alchemy fallback
+async function fetchEthSales(pageKey?: string): Promise<any[]> {
+  const reservoir = await fetchEthSalesReservoir();
+  if (reservoir.length >= 5) return reservoir;
+  // Fallback to Alchemy if Reservoir fails/empty
+  const alchemy = await fetchEthSalesAlchemy(pageKey);
+  return [...reservoir, ...alchemy];
 }
 
 // ─── Solana (MagicEden — expanded collections) ───
