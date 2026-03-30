@@ -200,6 +200,8 @@ const NFTLiveView = () => {
   const mutedRef = useRef(false);
   const [showChart, setShowChart] = useState(false);
   const [whaleFlash, setWhaleFlash] = useState(false);
+  const [whaleSwim, setWhaleSwim] = useState(false);
+  const whaleSwimRef = useRef(false);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const ambientAudioRef = useRef<HTMLAudioElement | null>(null);
   const ambientTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -279,6 +281,15 @@ const NFTLiveView = () => {
       playWhaleAlert();
       setWhaleFlash(true);
       setTimeout(() => setWhaleFlash(false), 2000);
+      // Only trigger swim if not already swimming
+      if (!whaleSwimRef.current) {
+        whaleSwimRef.current = true;
+        setWhaleSwim(true);
+        setTimeout(() => {
+          setWhaleSwim(false);
+          whaleSwimRef.current = false;
+        }, 3000);
+      }
     } else {
       playSalePing(chain);
     }
@@ -468,6 +479,40 @@ const NFTLiveView = () => {
           );
         })}
       </div>
+
+      {/* Whale swim overlay */}
+      {whaleSwim && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          pointerEvents: 'none',
+          zIndex: 50,
+          overflow: 'hidden',
+        }}>
+          <video
+            src="/whale-swim.mp4"
+            autoPlay
+            muted
+            playsInline
+            style={{
+              position: 'absolute',
+              width: 280,
+              height: 280,
+              bottom: 0,
+              left: -280,
+              mixBlendMode: 'screen',
+              animation: 'whale-swim-across 3s linear forwards',
+              opacity: 0.85,
+            }}
+          />
+          <style>{`
+            @keyframes whale-swim-across {
+              0% { transform: translate(0, 0) scaleX(-1); }
+              100% { transform: translate(calc(100vw + 560px), calc(-100vh - 280px)) scaleX(-1); }
+            }
+          `}</style>
+        </div>
+      )}
 
       {/* Chart overlay */}
       {showChart && <LiveSalesChart stats={stats} onClose={() => setShowChart(false)} />}
