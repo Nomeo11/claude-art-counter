@@ -37,56 +37,118 @@ function getTezosImageCandidates(token: any): string[] {
   ].filter(Boolean)));
 }
 
-// ─── Ethereum: Reservoir API (real marketplace sales) ───
-async function fetchReservoirSales(): Promise<any[]> {
+// ─── Ethereum: Alchemy getAssetTransfers (live ERC721 sales) ───
+async function fetchEthLiveTransfers(): Promise<any[]> {
   try {
-    const res = await fetch(`${RESERVOIR_BASE}/sales/v6?limit=15&sortBy=time&sortDirection=desc`, {
-      headers: { Accept: 'application/json' },
+    const alchemyRpc = `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`;
+    
+    // Fetch recent ERC721 transfers
+    const res = await fetch(alchemyRpc, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1,
+        method: 'alchemy_getAssetTransfers',
+        params: [{
+          category: ['erc721'],
+          order: 'desc',
+          maxCount: '0x1E', // 30
+          withMetadata: true,
+          excludeZeroValue: false,
+        }],
+      }),
     });
-    if (!res.ok) { console.error('Reservoir', res.status, await res.text().catch(() => '')); return []; }
+    if (!res.ok) { await res.text(); return []; }
     const data = await res.json();
-    const sales = data?.sales || [];
+    const transfers = data?.result?.transfers || [];
+    
+    // Filter out mints (from zero address)
+    const salesCandidates = transfers.filter((t: any) => 
+      t.from !== '0x0000000000000000000000000000000000000000'
+    );
 
-    return sales.map((s: any) => {
-      const price = s.price?.amount?.native || 0;
-      const currency = s.price?.currency?.symbol || 'ETH';
-      const collection = s.token?.collection?.name || 'Unknown';
-      const tokenName = s.token?.name || `#${s.token?.tokenId || '?'}`;
-      const image = s.token?.image || '';
-      const marketplace = (s.orderSource || s.fillSource || 'unknown').toLowerCase();
-      
-      // Normalize marketplace names
-      let mpLabel = marketplace.toUpperCase();
-      if (marketplace.includes('opensea')) mpLabel = 'OPENSEA';
-      else if (marketplace.includes('blur')) mpLabel = 'BLUR';
-      else if (marketplace.includes('looks')) mpLabel = 'LOOKSRARE';
-      else if (marketplace.includes('x2y2')) mpLabel = 'X2Y2';
-      else if (marketplace.includes('sudoswap')) mpLabel = 'SUDOSWAP';
-      else if (marketplace.includes('nftx')) mpLabel = 'NFTX';
-      else if (marketplace.includes('magiceden') || marketplace.includes('magic eden')) mpLabel = 'MAGIC EDEN';
-      else if (marketplace.includes('rarible')) mpLabel = 'RARIBLE';
+    // Get ETH values for transactions to find actual paid sales
+    const txHashes = [...new Set(salesCandidates.slice(0, 20).map((t: any) => t.hash))];
+    const txPromises = txHashes.map(hash =>
+      fetch(alchemyRpc, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getTransactionByHash', params: [hash] }),
+      }).then(r => r.ok ? r.json() : null).catch(() => null)
+    );
+    const txResults = await Promise.all(txPromises);
+    const txMap: Record<string, any> = {};
+    txResults.forEach(r => {
+      if (r?.result?.hash) txMap[r.result.hash] = r.result;
+    });
+
+    // Only keep transfers where the transaction had ETH value (= paid sale)
+    const paidTransfers = salesCandidates.filter((t: any) => {
+      const tx = txMap[t.hash];
+      const ethValue = tx?.value ? parseInt(tx.value, 16) / 1e18 : 0;
+      return ethValue > 0.001; // filter dust
+    }).slice(0, 15);
+
+    // Fetch metadata for paid transfers
+    const metaPromises = paidTransfers.map((t: any) => {
+      const contract = t.rawContract?.address;
+      const tokenId = t.erc721TokenId ? String(parseInt(t.erc721TokenId, 16)) : null;
+      if (!contract || !tokenId) return Promise.resolve(null);
+      return fetch(`${ALCHEMY_BASE}/getNFTMetadata?contractAddress=${contract}&tokenId=${tokenId}`, {
+        headers: { Accept: 'application/json' },
+      }).then(r => r.ok ? r.json() : null).catch(() => null);
+    });
+    const metas = await Promise.all(metaPromises);
+
+    // Known marketplace router contracts
+    const MARKETPLACE_MAP: Record<string, string> = {
+      '0x00000000000000adc04c56bf30ac9d3c0aaf14dc': 'OPENSEA',
+      '0x00000000006c3852cbef3e08e8df289169ede581': 'OPENSEA',
+      '0x0000000000000068f116a894984e2db1123eb395': 'OPENSEA',
+      '0x39da41747a83aee658334415666f3ef92dd0d541': 'BLUR',
+      '0xb2ecfe4e4d61f8790bbb9de2d1259b9e2410cea5': 'BLUR',
+      '0x29469395eaf6f95920e59f858042f0e28d98a20b': 'BLUR',
+      '0x74312363e45dcaba76c59ec49a7aa8a65a67eed3': 'X2Y2',
+      '0x59728544b08ab483533076417fbbb2fd0b17556a': 'LOOKSRARE',
+      '0x0000000000e655fae4d56241588680f86e3b2377': 'LOOKSRARE',
+      '0x2b2e8cda09bba9660dca5cb6233787738ad68329': 'SUDOSWAP',
+      '0xa020d57ab0448ef74115c112d18a9c231cc86000': 'MAGIC EDEN',
+    };
+
+    return paidTransfers.map((t: any, i: number) => {
+      const m = metas[i];
+      const tx = txMap[t.hash];
+      const ethValue = tx?.value ? parseInt(tx.value, 16) / 1e18 : 0;
+      const tokenId = t.erc721TokenId ? String(parseInt(t.erc721TokenId, 16)) : '?';
+      const collection = m?.contract?.openSeaMetadata?.collectionName || m?.contract?.name || 'Unknown';
+      const tokenName = m?.name || `#${tokenId}`;
+      const image = m?.image?.cachedUrl || m?.image?.thumbnailUrl || m?.image?.originalUrl || '';
+      const timestamp = t.metadata?.blockTimestamp || '';
+
+      const toAddr = tx?.to?.toLowerCase() || '';
+      const marketplace = MARKETPLACE_MAP[toAddr] || 'ETHEREUM';
 
       return {
-        id: `eth-reservoir-${s.id || s.txHash}`,
+        id: `eth-live-${t.uniqueId}`,
         collection,
         tokenName,
-        price,
-        currency,
+        price: ethValue,
+        currency: 'ETH',
         chain: 'ethereum',
-        marketplace: mpLabel,
+        marketplace,
         image,
-        timestamp: s.timestamp ? new Date(s.timestamp * 1000).toISOString() : '',
+        timestamp,
       };
     }).filter((s: any) => s.price > 0 && s.image);
   } catch (e) {
-    console.error('Reservoir fetch error:', e);
+    console.error('Alchemy live fetch error:', e);
     return [];
   }
 }
 
-// Combined Ethereum fetch: Reservoir primary
+// Combined Ethereum fetch
 async function fetchEthSales(_pageKey?: string): Promise<any[]> {
-  return fetchReservoirSales();
+  return fetchEthLiveTransfers();
 }
 
 // ─── Solana (MagicEden — expanded collections) ───
