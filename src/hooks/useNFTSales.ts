@@ -61,16 +61,9 @@ export function useNFTSales(onSale: SaleCallback) {
 
   const poll = useCallback(async () => {
     const sales = await fetchSales();
-    if (sales.length === 0) return;
-    // Spread sales across the polling window with random jitter
-    const windowMs = 7500; // slightly less than poll interval
-    const slots = sales.length;
+    // Emit each sale individually with a small stagger to avoid audio overlap
     sales.forEach((sale, i) => {
-      // Base delay spread evenly + random jitter of ±30%
-      const baseDelay = (windowMs / slots) * i;
-      const jitter = (Math.random() - 0.5) * 0.6 * (windowMs / slots);
-      const delay = Math.max(0, baseDelay + jitter);
-      setTimeout(() => onSaleRef.current(sale), delay);
+      setTimeout(() => onSaleRef.current(sale), i * 300);
     });
   }, []);
 
@@ -78,11 +71,11 @@ export function useNFTSales(onSale: SaleCallback) {
     poll();
 
     function schedule() {
-      // Poll every 8 seconds for continuous flow
+      // Poll every 3 seconds for near-real-time feel
       intervalRef.current = setTimeout(async () => {
         await poll();
         schedule();
-      }, 8000);
+      }, 3000);
     }
     schedule();
 
