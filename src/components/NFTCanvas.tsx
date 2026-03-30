@@ -528,8 +528,8 @@ const NFTLiveView = () => {
       {/* Chart overlay */}
       {showChart && <LiveSalesChart stats={stats} onClose={() => setShowChart(false)} />}
 
-        {/* Countdown overlay — Curious Cadence themed */}
-      {countdown !== null && (
+        {/* Splash / Countdown overlay — Curious Cadence themed */}
+      {(waitingForGo || countdown !== null) && (
         <div style={{
           position: 'absolute',
           inset: 0,
@@ -539,7 +539,7 @@ const NFTLiveView = () => {
           justifyContent: 'center',
           background: 'radial-gradient(ellipse at center, rgba(20,20,30,0.95) 0%, rgba(8,8,12,0.98) 70%)',
           zIndex: 20,
-          pointerEvents: 'none',
+          pointerEvents: waitingForGo ? 'auto' : 'none',
           gap: 28,
         }}>
           {/* Logo */}
@@ -575,45 +575,81 @@ const NFTLiveView = () => {
             })}
           </div>
 
-          {/* Countdown ring */}
-          <div style={{
-            position: 'relative',
-            width: 100,
-            height: 100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginTop: 8,
-          }}>
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: '50%',
-              border: '2px solid rgba(255,140,0,0.3)',
-              animation: 'countdown-ring-pulse 1s ease-in-out infinite',
-            }} />
-            <div style={{
-              position: 'absolute',
-              inset: 8,
-              borderRadius: '50%',
-              border: '1px solid rgba(255,140,0,0.15)',
-              animation: 'countdown-ring-pulse 1s ease-in-out infinite 0.2s',
-            }} />
+          {waitingForGo ? (
+            /* GO button */
             <div
-              key={countdown}
+              onClick={startCountdown}
               style={{
+                marginTop: 12,
+                cursor: 'pointer',
+                width: 100,
+                height: 100,
+                borderRadius: '50%',
+                border: '2px solid #FF8C00',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 fontFamily: '"Space Mono", monospace',
-                fontSize: 48,
+                fontSize: 24,
                 fontWeight: 700,
                 color: '#FF8C00',
-                textShadow: '0 0 40px rgba(255,140,0,0.6), 0 0 80px rgba(255,140,0,0.3)',
-                lineHeight: 1,
-                animation: 'countdown-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                textShadow: '0 0 20px rgba(255,140,0,0.6)',
+                boxShadow: '0 0 30px rgba(255,140,0,0.2), inset 0 0 20px rgba(255,140,0,0.1)',
+                animation: 'go-pulse 1.5s ease-in-out infinite',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(255,140,0,0.15)';
+                e.currentTarget.style.boxShadow = '0 0 40px rgba(255,140,0,0.4), inset 0 0 30px rgba(255,140,0,0.2)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.boxShadow = '0 0 30px rgba(255,140,0,0.2), inset 0 0 20px rgba(255,140,0,0.1)';
               }}
             >
-              {countdown}
+              GO
             </div>
-          </div>
+          ) : (
+            /* Countdown ring */
+            <div style={{
+              position: 'relative',
+              width: 100,
+              height: 100,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: 8,
+            }}>
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                border: '2px solid rgba(255,140,0,0.3)',
+                animation: 'countdown-ring-pulse 1s ease-in-out infinite',
+              }} />
+              <div style={{
+                position: 'absolute',
+                inset: 8,
+                borderRadius: '50%',
+                border: '1px solid rgba(255,140,0,0.15)',
+                animation: 'countdown-ring-pulse 1s ease-in-out infinite 0.2s',
+              }} />
+              <div
+                key={countdown}
+                style={{
+                  fontFamily: '"Space Mono", monospace',
+                  fontSize: 48,
+                  fontWeight: 700,
+                  color: '#FF8C00',
+                  textShadow: '0 0 40px rgba(255,140,0,0.6), 0 0 80px rgba(255,140,0,0.3)',
+                  lineHeight: 1,
+                  animation: 'countdown-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                }}
+              >
+                {countdown}
+              </div>
+            </div>
+          )}
 
           <div style={{
             fontFamily: '"Space Mono", monospace',
@@ -623,7 +659,7 @@ const NFTLiveView = () => {
             textTransform: 'uppercase',
             opacity: 0.7,
           }}>
-            Real-time Data Replication
+            {waitingForGo ? 'Scanning 10+ Marketplaces' : 'Real-time Data Replication'}
           </div>
 
           <style>{`
@@ -635,6 +671,10 @@ const NFTLiveView = () => {
             @keyframes countdown-ring-pulse {
               0%, 100% { transform: scale(1); opacity: 0.5; }
               50% { transform: scale(1.1); opacity: 1; }
+            }
+            @keyframes go-pulse {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.08); }
             }
           `}</style>
         </div>
