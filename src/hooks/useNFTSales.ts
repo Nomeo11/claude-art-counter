@@ -80,7 +80,11 @@ export function useNFTSales(onSale: SaleCallback) {
   const intervalRef = useRef<ReturnType<typeof setTimeout>>();
 
   const poll = useCallback(async () => {
-    const sales = await fetchSales();
+    let sales = await fetchSales();
+    if (isFirstPoll) {
+      sales = limitInitialBatch(sales);
+      isFirstPoll = false;
+    }
     sales.forEach((sale, i) => {
       setTimeout(() => onSaleRef.current(sale), i * 300);
     });
