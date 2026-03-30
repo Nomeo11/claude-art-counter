@@ -84,45 +84,9 @@ async function fetchReservoirSales(): Promise<any[]> {
   }
 }
 
-// ─── Ethereum fallback: Alchemy getNFTSales (historical) ───
-async function fetchEthSalesHistorical(pageKey?: string): Promise<any[]> {
-  try {
-    const url = `${ALCHEMY_BASE}/getNFTSales?fromBlock=0&toBlock=latest&limit=10&order=desc${pageKey ? `&pageKey=${pageKey}` : ''}`;
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const sales = data.nftSales || [];
-
-    const metaRequests = sales.map((s: any) =>
-      fetch(`${ALCHEMY_BASE}/getNFTMetadata?contractAddress=${s.contractAddress}&tokenId=${s.tokenId}`, { headers: { Accept: 'application/json' } })
-        .then(r => r.ok ? r.json() : null).catch(() => null)
-    );
-    const metas = await Promise.all(metaRequests);
-
-    return sales.map((s: any, i: number) => {
-      const m = metas[i];
-      const total = (BigInt(s.sellerFee?.amount || '0') + BigInt(s.protocolFee?.amount || '0') + BigInt(s.royaltyFee?.amount || '0'));
-      const price = Number(total) / 1e18;
-      return {
-        id: `eth-${s.transactionHash}-${s.logIndex}`,
-        collection: m?.contract?.openSeaMetadata?.collectionName || m?.contract?.name || 'Unknown',
-        tokenName: m?.name || `#${s.tokenId}`,
-        price,
-        currency: 'ETH',
-        chain: 'ethereum',
-        marketplace: (s.marketplace || 'unknown').toUpperCase(),
-        image: m?.image?.cachedUrl || m?.image?.thumbnailUrl || m?.image?.originalUrl || '',
-      };
-    }).filter((s: any) => s.price > 0);
-  } catch { return []; }
-}
-
-// Combined Ethereum fetch: live first, historical fallback
-async function fetchEthSales(pageKey?: string): Promise<any[]> {
-  const live = await fetchEthSalesLive();
-  if (live.length >= 3) return live;
-  const historical = await fetchEthSalesHistorical(pageKey);
-  return [...live, ...historical];
+// Combined Ethereum fetch: Reservoir primary
+async function fetchEthSales(_pageKey?: string): Promise<any[]> {
+  return fetchReservoirSales();
 }
 
 // ─── Solana (MagicEden — expanded collections) ───
