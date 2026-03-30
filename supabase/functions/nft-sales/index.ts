@@ -197,10 +197,11 @@ async function fetchRaribleSales(): Promise<any[]> {
       headers: {
         'Content-Type': 'application/json',
         'X-API-KEY': apiKey,
+        'Referer': 'https://id-preview--e22f2454-77fb-4983-b775-a8c59b148c89.lovable.app',
       },
       body: JSON.stringify({
-        types: ['SELL'],
-        size: 10,
+        filter: { types: ['SELL'] },
+        size: 15,
         sort: 'LATEST',
       }),
     });
@@ -208,30 +209,67 @@ async function fetchRaribleSales(): Promise<any[]> {
     const data = await res.json();
     const activities = data?.activities || [];
 
+    // Fetch item metadata for each sale to get images + collection name
+    const itemIds = activities
+      .map((a: any) => {
+        const contract = a.nft?.type?.contract;
+        const tokenId = a.nft?.type?.tokenId;
+        return contract && tokenId ? `${contract}:${tokenId}` : null;
+      })
+      .filter(Boolean);
+
+    const metaRequests = itemIds.map((itemId: string) =>
+      fetch(`https://api.rarible.org/v0.1/items/${itemId}`, {
+        headers: {
+          'X-API-KEY': apiKey,
+          'Referer': 'https://id-preview--e22f2454-77fb-4983-b775-a8c59b148c89.lovable.app',
+        },
+      }).then(r => r.ok ? r.json() : null).catch(() => null)
+    );
+    const metas = await Promise.all(metaRequests);
+    const metaMap: Record<string, any> = {};
+    metas.forEach((m: any, i: number) => { if (m) metaMap[itemIds[i]] = m; });
+
     return activities.map((a: any) => {
-      const nft = a.nft || {};
       const priceValue = parseFloat(a.price || '0');
-      // Determine chain from the ID prefix
       const idPrefix = (a.id || '').split(':')[0]?.toUpperCase();
       let chain = 'ethereum';
       let currency = 'ETH';
       if (idPrefix === 'SOLANA') { chain = 'solana'; currency = 'SOL'; }
       else if (idPrefix === 'TEZOS') { chain = 'tezos'; currency = 'XTZ'; }
+      else if (idPrefix === 'BASE') { chain = 'ethereum'; currency = 'ETH'; }
       else if (idPrefix === 'POLYGON') { chain = 'ethereum'; currency = 'MATIC'; }
 
-      const image = nft.type?.meta?.content?.find((c: any) => c.representation === 'PREVIEW' || c.representation === 'ORIGINAL')?.url || '';
+      // Check payment type for ERC20 (like USDC on Base)
+      const paymentType = a.payment?.type?.['@type'];
+      if (paymentType === 'ERC20') {
+        // It's a token payment — use USD price if available
+        if (a.priceUsd) {
+          currency = 'USD';
+        }
+      }
+
+      const contract = a.nft?.type?.contract;
+      const tokenId = a.nft?.type?.tokenId;
+      const itemId = contract && tokenId ? `${contract}:${tokenId}` : '';
+      const meta = metaMap[itemId];
+      const image = meta?.meta?.content?.find((c: any) =>
+        c['@type'] === 'IMAGE' && (c.representation === 'PREVIEW' || c.representation === 'ORIGINAL')
+      )?.url || '';
+      const collectionName = meta?.meta?.name || 'Unknown';
+      const source = (a.source || 'RARIBLE').toUpperCase().replace('OPEN_SEA', 'OPENSEA');
 
       return {
         id: `rarible-${a.id}`,
-        collection: nft.type?.meta?.name || 'Unknown',
-        tokenName: nft.type?.meta?.name || 'Unknown',
-        price: priceValue,
-        currency,
+        collection: collectionName,
+        tokenName: collectionName,
+        price: currency === 'USD' ? parseFloat(a.priceUsd || '0') : priceValue,
+        currency: currency === 'USD' ? 'USD' : currency,
         chain,
-        marketplace: 'RARIBLE',
+        marketplace: source,
         image,
       };
-    }).filter((s: any) => s.price > 0);
+    }).filter((s: any) => s.price > 0 && s.image);
   } catch { return []; }
 }
 
