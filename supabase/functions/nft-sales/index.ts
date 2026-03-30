@@ -186,10 +186,17 @@ async function fetchFxhashSales(): Promise<any[]> {
   } catch { return []; }
 }
 
-// ─── Rarible (multi-chain) — requires API key ───
+// ─── Rarible (multi-chain) — requires API key, cached to avoid rate limits ───
+let raribleCache: { data: any[]; ts: number } = { data: [], ts: 0 };
+const RARIBLE_CACHE_TTL = 30_000; // 30 seconds
 async function fetchRaribleSales(): Promise<any[]> {
   const apiKey = Deno.env.get('RARIBLE_API_KEY');
   if (!apiKey) return [];
+  
+  // Return cached data if fresh
+  if (Date.now() - raribleCache.ts < RARIBLE_CACHE_TTL && raribleCache.data.length > 0) {
+    return raribleCache.data;
+  }
 
   try {
     const referer = 'https://id-preview--e22f2454-77fb-4983-b775-a8c59b148c89.lovable.app';
@@ -198,7 +205,11 @@ async function fetchRaribleSales(): Promise<any[]> {
       headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey, 'Referer': referer },
       body: JSON.stringify({ filter: { types: ['SELL'] }, size: 5, sort: 'LATEST' }),
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.error(`Rarible API ${res.status}: ${errText.slice(0, 200)}`);
+      return [];
+    }
     const data = await res.json();
     const activities = data?.activities || [];
 
@@ -247,7 +258,9 @@ async function fetchRaribleSales(): Promise<any[]> {
         image,
       };
     }).filter((s: any) => s.price > 0);
-  } catch { return []; }
+    raribleCache = { data: result, ts: Date.now() };
+    return result;
+  } catch { return raribleCache.data; }
 }
 
 serve(async (req) => {
@@ -259,6 +272,7 @@ serve(async (req) => {
     const url = new URL(req.url);
     const chain = url.searchParams.get('chain') || 'all';
     const pageKey = url.searchParams.get('pageKey') || undefined;
+    const includeRarible = url.searchParams.get('rarible') === '1';
 
     let sales: any[] = [];
 
@@ -270,21 +284,23 @@ serve(async (req) => {
       ]).catch(() => [] as unknown as T);
     }
 
+    const rariblePromise = includeRarible ? withTimeout(fetchRaribleSales()) : Promise.resolve([]);
+
     if (chain === 'all') {
       const [eth, sol, tez, fxhash, rarible] = await Promise.all([
         withTimeout(fetchEthSales(pageKey)),
         withTimeout(fetchSolanaSales()),
         withTimeout(fetchTezosSales()),
         withTimeout(fetchFxhashSales()),
-        withTimeout(fetchRaribleSales()),
+        rariblePromise,
       ]);
       sales = [...eth, ...sol, ...tez, ...fxhash, ...rarible];
       sales.sort(() => Math.random() - 0.5);
     } else if (chain === 'ethereum') {
-      const [eth, rarible] = await Promise.all([withTimeout(fetchEthSales(pageKey)), withTimeout(fetchRaribleSales())]);
+      const [eth, rarible] = await Promise.all([withTimeout(fetchEthSales(pageKey)), rariblePromise]);
       sales = [...eth, ...rarible.filter(s => s.chain === 'ethereum')];
     } else if (chain === 'solana') {
-      const [sol, rarible] = await Promise.all([withTimeout(fetchSolanaSales()), withTimeout(fetchRaribleSales())]);
+      const [sol, rarible] = await Promise.all([withTimeout(fetchSolanaSales()), rariblePromise]);
       sales = [...sol, ...rarible.filter(s => s.chain === 'solana')];
     } else if (chain === 'tezos') {
       const [tez, fxhash] = await Promise.all([withTimeout(fetchTezosSales()), withTimeout(fetchFxhashSales())]);
