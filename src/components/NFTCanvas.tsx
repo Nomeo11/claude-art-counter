@@ -271,10 +271,7 @@ const NFTLiveView = () => {
     statsRef.current[chain] = (statsRef.current[chain] || 0) + 1;
 
     setColumns(prev => {
-      const existing = prev[chain];
-      // Deduplicate by id to prevent React key conflicts
-      if (existing.some(s => s.id === sale.id)) return prev;
-      const col = [sale, ...existing].slice(0, 50);
+      const col = [sale, ...prev[chain]].slice(0, 50);
       return { ...prev, [chain]: col };
     });
     setStats({ ...statsRef.current });
@@ -475,8 +472,8 @@ const NFTLiveView = () => {
                     Waiting for sales…
                   </div>
                 )}
-                {sales.map((sale) => (
-                  <SaleCard key={sale.id} sale={sale} />
+                {sales.map((sale, idx) => (
+                  <SaleCard key={`${sale.id}-${sale.timestamp}-${idx}`} sale={sale} />
                 ))}
               </div>
             </div>
