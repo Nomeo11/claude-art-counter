@@ -74,10 +74,14 @@ function limitInitialBatch(sales: NFTSale[]): NFTSale[] {
   });
 }
 
+const COUNTDOWN_SECONDS = 20;
+
 export function useNFTSales(onSale: SaleCallback) {
   const onSaleRef = useRef(onSale);
   onSaleRef.current = onSale;
   const intervalRef = useRef<ReturnType<typeof setTimeout>>();
+  const countdownRef = useRef<ReturnType<typeof setInterval>>();
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   const poll = useCallback(async () => {
     let sales = await fetchSales();
@@ -91,16 +95,34 @@ export function useNFTSales(onSale: SaleCallback) {
   }, []);
 
   useEffect(() => {
-    poll();
+    // First poll: show initial batch, then countdown before going live
+    poll().then(() => {
+      setCountdown(COUNTDOWN_SECONDS);
+      let remaining = COUNTDOWN_SECONDS;
+      countdownRef.current = setInterval(() => {
+        remaining--;
+        setCountdown(remaining);
+        if (remaining <= 0) {
+          clearInterval(countdownRef.current);
+          setCountdown(null);
+          // Start live polling
+          function schedule() {
+            intervalRef.current = setTimeout(async () => {
+              await poll();
+              schedule();
+            }, 3000);
+          }
+          poll();
+          schedule();
+        }
+      }, 1000);
+    });
 
-    function schedule() {
-      intervalRef.current = setTimeout(async () => {
-        await poll();
-        schedule();
-      }, 3000);
-    }
-    schedule();
-
-    return () => clearTimeout(intervalRef.current);
+    return () => {
+      clearTimeout(intervalRef.current);
+      clearInterval(countdownRef.current);
+    };
   }, [poll]);
+
+  return { countdown };
 }
