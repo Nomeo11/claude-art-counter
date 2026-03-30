@@ -247,24 +247,32 @@ serve(async (req) => {
 
     let sales: any[] = [];
 
+    // Wrap each fetch with a 8-second timeout to prevent edge function timeout
+    function withTimeout<T>(promise: Promise<T>, ms = 8000): Promise<T> {
+      return Promise.race([
+        promise,
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+      ]).catch(() => [] as unknown as T);
+    }
+
     if (chain === 'all') {
       const [eth, sol, tez, fxhash, rarible] = await Promise.all([
-        fetchEthSales(pageKey),
-        fetchSolanaSales(),
-        fetchTezosSales(),
-        fetchFxhashSales(),
-        fetchRaribleSales(),
+        withTimeout(fetchEthSales(pageKey)),
+        withTimeout(fetchSolanaSales()),
+        withTimeout(fetchTezosSales()),
+        withTimeout(fetchFxhashSales()),
+        withTimeout(fetchRaribleSales()),
       ]);
       sales = [...eth, ...sol, ...tez, ...fxhash, ...rarible];
       sales.sort(() => Math.random() - 0.5);
     } else if (chain === 'ethereum') {
-      const [eth, rarible] = await Promise.all([fetchEthSales(pageKey), fetchRaribleSales()]);
+      const [eth, rarible] = await Promise.all([withTimeout(fetchEthSales(pageKey)), withTimeout(fetchRaribleSales())]);
       sales = [...eth, ...rarible.filter(s => s.chain === 'ethereum')];
     } else if (chain === 'solana') {
-      const [sol, rarible] = await Promise.all([fetchSolanaSales(), fetchRaribleSales()]);
+      const [sol, rarible] = await Promise.all([withTimeout(fetchSolanaSales()), withTimeout(fetchRaribleSales())]);
       sales = [...sol, ...rarible.filter(s => s.chain === 'solana')];
     } else if (chain === 'tezos') {
-      const [tez, fxhash] = await Promise.all([fetchTezosSales(), fetchFxhashSales()]);
+      const [tez, fxhash] = await Promise.all([withTimeout(fetchTezosSales()), withTimeout(fetchFxhashSales())]);
       sales = [...tez, ...fxhash];
     }
 
