@@ -29,7 +29,7 @@ const USD_PRICES: Record<string, number> = {
 
 function isWhale(price: number, currency: string): boolean {
   const usdRate = USD_PRICES[currency] || 1;
-  return price * usdRate >= 1000;
+  return price * usdRate >= 5000;
 }
 
 function formatPrice(price: number, symbol: string): string {
