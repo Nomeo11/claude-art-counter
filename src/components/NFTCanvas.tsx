@@ -281,6 +281,15 @@ const NFTLiveView = () => {
       playWhaleAlert();
       setWhaleFlash(true);
       setTimeout(() => setWhaleFlash(false), 2000);
+      // Only trigger swim if not already swimming
+      if (!whaleSwimRef.current) {
+        whaleSwimRef.current = true;
+        setWhaleSwim(true);
+        setTimeout(() => {
+          setWhaleSwim(false);
+          whaleSwimRef.current = false;
+        }, 3000);
+      }
     } else {
       playSalePing(chain);
     }
