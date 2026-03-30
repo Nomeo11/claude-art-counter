@@ -205,6 +205,7 @@ const NFTLiveView = () => {
   const [showChart, setShowChart] = useState(false);
   const [whaleFlash, setWhaleFlash] = useState(false);
   const [whaleIds, setWhaleIds] = useState<Set<string>>(new Set());
+  const [whaleSales, setWhaleSales] = useState<NFTSale[]>([]);
   const [whaleSwim, setWhaleSwim] = useState<false | 'left' | 'right'>(false);
   const whaleSwimRef = useRef(false);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
