@@ -63,10 +63,14 @@ function SaleCard({ sale, isWhaleSale }: { sale: NFTSale; isWhaleSale?: boolean 
       className="animate-in fade-in slide-in-from-top-4 duration-500"
       style={{
         background: 'rgba(18, 18, 26, 0.95)',
-        border: `1px solid ${config.color}33`,
+        border: isWhaleSale ? '2px solid rgba(255, 200, 50, 0.7)' : `1px solid ${config.color}33`,
         borderRadius: 10,
         overflow: 'hidden',
         marginBottom: 10,
+        boxShadow: isWhaleSale
+          ? '0 0 12px rgba(255, 200, 50, 0.4), 0 0 30px rgba(255, 180, 0, 0.2), inset 0 0 12px rgba(255, 200, 50, 0.05)'
+          : 'none',
+        animation: isWhaleSale ? 'whale-card-glow 2s ease-in-out infinite alternate' : undefined,
       }}
     >
       {/* Image */}
