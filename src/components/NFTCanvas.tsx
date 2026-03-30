@@ -273,7 +273,7 @@ const NFTLiveView = () => {
     });
   }, [playWhaleAlert, playSalePing]);
 
-  useNFTSales(handleSale);
+  const { countdown } = useNFTSales(handleSale);
 
   const total = stats.ethereum + stats.solana + stats.tezos;
 
@@ -377,6 +377,42 @@ const NFTLiveView = () => {
           );
         })}
       </div>
+
+      {/* Countdown overlay */}
+      {countdown !== null && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'rgba(8,8,12,0.85)',
+          zIndex: 20,
+          pointerEvents: 'none',
+        }}>
+          <div style={{
+            fontFamily: '"Space Mono", monospace',
+            fontSize: 14,
+            color: 'rgba(255,255,255,0.5)',
+            letterSpacing: 2,
+            marginBottom: 12,
+            textTransform: 'uppercase',
+          }}>
+            Going live in
+          </div>
+          <div style={{
+            fontFamily: '"Space Mono", monospace',
+            fontSize: 72,
+            fontWeight: 700,
+            color: '#00ff88',
+            textShadow: '0 0 30px rgba(0,255,136,0.4), 0 0 60px rgba(0,255,136,0.2)',
+            lineHeight: 1,
+          }}>
+            {countdown}
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div style={{
