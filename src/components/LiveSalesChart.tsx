@@ -47,6 +47,23 @@ export default function LiveSalesChart({ stats, onClose }: Props) {
       gap: 20,
       padding: 40,
     }}>
+      {/* Close button */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          top: 14,
+          right: 14,
+          cursor: 'pointer',
+          color: 'rgba(255,255,255,0.4)',
+          transition: 'color 0.2s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
+      >
+        <X size={20} />
+      </div>
+
       {/* Title */}
       <div style={{ fontSize: 10, letterSpacing: 3, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>
         Live Sales Volume
