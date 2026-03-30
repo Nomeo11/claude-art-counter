@@ -89,6 +89,7 @@ export function useNFTSales(onSale: SaleCallback) {
   const intervalRef = useRef<ReturnType<typeof setTimeout>>();
   const countdownRef = useRef<ReturnType<typeof setInterval>>();
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [waitingForGo, setWaitingForGo] = useState(true);
   const bufferedSalesRef = useRef<NFTSale[]>([]);
 
   const poll = useCallback(async () => {
@@ -106,11 +107,12 @@ export function useNFTSales(onSale: SaleCallback) {
     });
   }, []);
 
-  useEffect(() => {
+  const startCountdown = useCallback(() => {
+    setWaitingForGo(false);
     setCountdown(COUNTDOWN_SECONDS);
     let remaining = COUNTDOWN_SECONDS;
 
-    // Fetch initial batch in background but buffer it — don't dispatch yet
+    // Pre-fetch sales during countdown
     poll().then(sales => {
       bufferedSalesRef.current = sales;
     });
@@ -122,7 +124,7 @@ export function useNFTSales(onSale: SaleCallback) {
         clearInterval(countdownRef.current);
         setCountdown(null);
 
-        // Now dispatch buffered sales
+        // Dispatch buffered sales
         dispatchSales(bufferedSalesRef.current);
         bufferedSalesRef.current = [];
 
@@ -140,12 +142,14 @@ export function useNFTSales(onSale: SaleCallback) {
         });
       }
     }, 1000);
+  }, [poll, dispatchSales]);
 
+  useEffect(() => {
     return () => {
       clearTimeout(intervalRef.current);
       clearInterval(countdownRef.current);
     };
-  }, [poll, dispatchSales]);
+  }, []);
 
-  return { countdown };
+  return { countdown, waitingForGo, startCountdown };
 }
