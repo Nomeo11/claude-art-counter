@@ -63,7 +63,16 @@ serve(async (req) => {
         const res = await fetchWithTimeout(tryUrl, 5000);
         if (res.ok) {
           const contentType = res.headers.get('content-type') || 'image/png';
+          // Reject non-image content (HTML pages, videos, etc.)
+          if (!contentType.startsWith('image/') && !contentType.startsWith('application/octet-stream')) {
+            await res.arrayBuffer(); // consume body
+            continue;
+          }
           const body = await res.arrayBuffer();
+          // Reject suspiciously small responses (likely error pages)
+          if (body.byteLength < 100) {
+            continue;
+          }
           return new Response(body, {
             headers: {
               ...corsHeaders,

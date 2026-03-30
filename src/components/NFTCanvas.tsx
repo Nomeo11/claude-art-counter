@@ -65,6 +65,7 @@ function SaleCard({ sale }: { sale: NFTSale }) {
               display: 'block',
               background: '#15151f',
             }}
+            loading="lazy"
           />
         ) : (
           <div style={{
