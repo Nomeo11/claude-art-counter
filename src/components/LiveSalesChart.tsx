@@ -19,7 +19,7 @@ const CHAINS: { key: string; label: string; color: string; symbol: string }[] = 
   { key: 'tezos', label: 'XTZ', color: '#2C7DF7', symbol: 'ꜩ' },
 ];
 
-export default function LiveSalesChart({ stats }: Props) {
+export default function LiveSalesChart({ stats, onClose }: Props) {
   const data = useMemo<ChainStats[]>(() => {
     return CHAINS.map(c => ({
       chain: c.key,
