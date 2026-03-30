@@ -213,13 +213,11 @@ const NFTLiveView = () => {
     });
     setStats({ ...statsRef.current });
 
-    playSound(chain);
-
     requestAnimationFrame(() => {
       const el = colRefs.current[chain];
       if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
     });
-  }, [playSound]);
+  }, []);
 
   useNFTSales(handleSale);
 
