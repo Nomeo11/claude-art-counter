@@ -522,6 +522,8 @@ const NFTLiveView = () => {
               width: 320,
               height: 320,
               filter: 'brightness(1.3) drop-shadow(0 0 20px rgba(100,180,255,0.6)) drop-shadow(0 0 40px rgba(100,180,255,0.3))',
+              mixBlendMode: 'screen',
+              objectFit: 'contain',
               ...(whaleSwim === 'left' ? {
                 bottom: 0,
                 left: -320,
