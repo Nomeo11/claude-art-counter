@@ -311,6 +311,8 @@ const NFTLiveView = () => {
         </div>
       </div>
 
+      <PriceTicker />
+
       {/* 3-column grid */}
       <div style={{
         flex: 1,
