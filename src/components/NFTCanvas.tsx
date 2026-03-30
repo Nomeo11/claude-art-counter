@@ -171,12 +171,6 @@ function SaleCard({ sale }: { sale: NFTSale }) {
   );
 }
 
-const CHAIN_SOUNDS: Record<string, string> = {
-  ethereum: '/sounds/eth-sale.wav',
-  solana: '/sounds/sol-sale.wav',
-  tezos: '/sounds/tez-sale.wav',
-};
-
 const NFTLiveView = () => {
   const [columns, setColumns] = useState<Record<string, NFTSale[]>>({
     ethereum: [],
@@ -188,7 +182,6 @@ const NFTLiveView = () => {
   const colRefs = useRef<Record<string, HTMLDivElement | null>>({ ethereum: null, solana: null, tezos: null });
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
-  const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -199,12 +192,6 @@ const NFTLiveView = () => {
   }, [muted]);
 
   useEffect(() => {
-    for (const [chain, src] of Object.entries(CHAIN_SOUNDS)) {
-      const audio = new Audio(src);
-      audio.volume = 0.15;
-      audioRefs.current[chain] = audio;
-    }
-
     const bgAudio = new Audio('/sounds/bg-loop.wav');
     bgAudio.loop = true;
     bgAudio.volume = 0.35;
@@ -214,15 +201,6 @@ const NFTLiveView = () => {
     return () => {
       bgAudio.pause();
     };
-  }, []);
-
-  const playSound = useCallback((chain: string) => {
-    if (mutedRef.current) return;
-    const audio = audioRefs.current[chain];
-    if (audio) {
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
-    }
   }, []);
 
   const handleSale = useCallback((sale: NFTSale) => {
