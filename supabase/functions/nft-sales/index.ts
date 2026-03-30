@@ -192,45 +192,31 @@ async function fetchRaribleSales(): Promise<any[]> {
   if (!apiKey) return [];
 
   try {
+    const referer = 'https://id-preview--e22f2454-77fb-4983-b775-a8c59b148c89.lovable.app';
     const res = await fetch('https://api.rarible.org/v0.1/activities/search', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-KEY': apiKey,
-        'Referer': 'https://id-preview--e22f2454-77fb-4983-b775-a8c59b148c89.lovable.app',
-      },
-      body: JSON.stringify({
-        filter: { types: ['SELL'] },
-        size: 5,
-        sort: 'LATEST',
-      }),
+      headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey, 'Referer': referer },
+      body: JSON.stringify({ filter: { types: ['SELL'] }, size: 5, sort: 'LATEST' }),
     });
     if (!res.ok) return [];
     const data = await res.json();
     const activities = data?.activities || [];
 
-    // Fetch item metadata for each sale to get images + collection name
-    const itemIds = activities
-      .map((a: any) => {
-        const contract = a.nft?.type?.contract;
-        const tokenId = a.nft?.type?.tokenId;
-        return contract && tokenId ? `${contract}:${tokenId}` : null;
+    // Fetch metadata in parallel with a short per-item timeout
+    const headers = { 'X-API-KEY': apiKey, 'Referer': referer };
+    const metaResults = await Promise.all(
+      activities.map((a: any) => {
+        const c = a.nft?.type?.contract;
+        const t = a.nft?.type?.tokenId;
+        if (!c || !t) return Promise.resolve(null);
+        return Promise.race([
+          fetch(`https://api.rarible.org/v0.1/items/${c}:${t}`, { headers }).then(r => r.ok ? r.json() : null),
+          new Promise(r => setTimeout(() => r(null), 3000)),
+        ]).catch(() => null);
       })
-      .filter(Boolean);
-
-    const metaRequests = itemIds.map((itemId: string) =>
-      fetch(`https://api.rarible.org/v0.1/items/${itemId}`, {
-        headers: {
-          'X-API-KEY': apiKey,
-          'Referer': 'https://id-preview--e22f2454-77fb-4983-b775-a8c59b148c89.lovable.app',
-        },
-      }).then(r => r.ok ? r.json() : null).catch(() => null)
     );
-    const metas = await Promise.all(metaRequests);
-    const metaMap: Record<string, any> = {};
-    metas.forEach((m: any, i: number) => { if (m) metaMap[itemIds[i]] = m; });
 
-    return activities.map((a: any) => {
+    return activities.map((a: any, i: number) => {
       const priceValue = parseFloat(a.price || '0');
       const idPrefix = (a.id || '').split(':')[0]?.toUpperCase();
       let chain = 'ethereum';
@@ -240,23 +226,14 @@ async function fetchRaribleSales(): Promise<any[]> {
       else if (idPrefix === 'BASE') { chain = 'ethereum'; currency = 'ETH'; }
       else if (idPrefix === 'POLYGON') { chain = 'ethereum'; currency = 'MATIC'; }
 
-      // Check payment type for ERC20 (like USDC on Base)
       const paymentType = a.payment?.type?.['@type'];
-      if (paymentType === 'ERC20') {
-        // It's a token payment — use USD price if available
-        if (a.priceUsd) {
-          currency = 'USD';
-        }
-      }
+      if (paymentType === 'ERC20' && a.priceUsd) { currency = 'USD'; }
 
-      const contract = a.nft?.type?.contract;
-      const tokenId = a.nft?.type?.tokenId;
-      const itemId = contract && tokenId ? `${contract}:${tokenId}` : '';
-      const meta = metaMap[itemId];
+      const meta = metaResults[i];
       const image = meta?.meta?.content?.find((c: any) =>
         c['@type'] === 'IMAGE' && (c.representation === 'PREVIEW' || c.representation === 'ORIGINAL')
       )?.url || '';
-      const collectionName = meta?.meta?.name || 'Unknown';
+      const collectionName = meta?.meta?.name || `NFT #${a.nft?.type?.tokenId || '?'}`;
       const source = (a.source || 'RARIBLE').toUpperCase().replace('OPEN_SEA', 'OPENSEA');
 
       return {
@@ -269,7 +246,7 @@ async function fetchRaribleSales(): Promise<any[]> {
         marketplace: source,
         image,
       };
-    }).filter((s: any) => s.price > 0 && s.image);
+    }).filter((s: any) => s.price > 0);
   } catch { return []; }
 }
 
