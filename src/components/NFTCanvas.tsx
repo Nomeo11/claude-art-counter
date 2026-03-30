@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNFTSales, type NFTSale } from '@/hooks/useNFTSales';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX, BarChart3 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import PriceTicker from './PriceTicker';
+import LiveSalesChart from './LiveSalesChart';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -197,6 +198,7 @@ const NFTLiveView = () => {
   const colRefs = useRef<Record<string, HTMLDivElement | null>>({ ethereum: null, solana: null, tezos: null });
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
+  const [showChart, setShowChart] = useState(false);
   const [whaleFlash, setWhaleFlash] = useState(false);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const ambientAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -379,11 +381,19 @@ const NFTLiveView = () => {
             }
           `}</style>
         </div>
-        <div
-          style={{ cursor: 'pointer', color: muted ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.6)', transition: 'color 0.2s' }}
-          onClick={() => setMuted(m => !m)}
-        >
-          {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{ cursor: 'pointer', color: showChart ? '#00ff88' : 'rgba(255,255,255,0.4)', transition: 'color 0.2s' }}
+            onClick={() => setShowChart(v => !v)}
+          >
+            <BarChart3 size={18} />
+          </div>
+          <div
+            style={{ cursor: 'pointer', color: muted ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.6)', transition: 'color 0.2s' }}
+            onClick={() => setMuted(m => !m)}
+          >
+            {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </div>
         </div>
       </div>
 
@@ -458,6 +468,9 @@ const NFTLiveView = () => {
           );
         })}
       </div>
+
+      {/* Chart overlay */}
+      {showChart && <LiveSalesChart stats={stats} />}
 
       {/* Countdown overlay */}
       {countdown !== null && (
