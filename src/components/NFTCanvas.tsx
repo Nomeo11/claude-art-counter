@@ -41,7 +41,7 @@ function formatPrice(price: number, symbol: string): string {
   return `${symbol} ${price.toFixed(3)}`;
 }
 
-function SaleCard({ sale }: { sale: NFTSale }) {
+function SaleCard({ sale, isWhaleSale }: { sale: NFTSale; isWhaleSale?: boolean }) {
   const config = CHAIN_CONFIG[sale.chain] || CHAIN_CONFIG.ethereum;
   const [imgError, setImgError] = useState(false);
   const [imgIndex, setImgIndex] = useState(0);
