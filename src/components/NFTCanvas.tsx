@@ -524,6 +524,7 @@ const NFTLiveView = () => {
               filter: 'brightness(1.3) drop-shadow(0 0 20px rgba(100,180,255,0.6)) drop-shadow(0 0 40px rgba(100,180,255,0.3))',
               mixBlendMode: 'screen',
               objectFit: 'contain',
+              background: 'transparent',
               ...(whaleSwim === 'left' ? {
                 bottom: 0,
                 left: -320,
@@ -537,12 +538,13 @@ const NFTLiveView = () => {
           />
           <style>{`
             @keyframes whale-swim-left-to-right {
-              0% { transform: translate(0, 0) scaleX(-1); }
-              100% { transform: translate(calc(100vw + 640px), calc(-100vh - 320px)) scaleX(-1); }
+              0% { transform: translate(0, 0); }
+              100% { transform: translate(calc(100vw + 640px), calc(-100vh - 320px)); }
             }
             @keyframes whale-swim-right-to-left {
-              0% { transform: translate(0, 0); }
-              100% { transform: translate(calc(-100vw - 640px), calc(-100vh - 320px)); }
+              0% { transform: translate(0, 0) scaleX(-1); }
+              100% { transform: translate(calc(-100vw - 640px), calc(-100vh - 320px)) scaleX(-1); }
+            }
             }
           `}</style>
         </div>
