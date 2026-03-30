@@ -206,15 +206,29 @@ const NFTLiveView = () => {
     }
   }, [muted]);
 
+  // Start bg music only after countdown ends
   useEffect(() => {
-    const bgAudio = new Audio('/sounds/bg-loop.wav');
-    bgAudio.loop = true;
-    bgAudio.volume = 0.35;
-    bgAudioRef.current = bgAudio;
-    bgAudio.play().catch(() => {});
-
+    if (countdown === null && !bgAudioRef.current) {
+      const bgAudio = new Audio('/sounds/bg-loop.wav');
+      bgAudio.loop = true;
+      bgAudio.volume = 0.35;
+      bgAudioRef.current = bgAudio;
+      bgAudio.play().catch(() => {});
+    }
     return () => {
-      bgAudio.pause();
+      if (bgAudioRef.current && countdown === null) {
+        // cleanup on unmount only
+      }
+    };
+  }, [countdown]);
+
+  // Cleanup bg audio on unmount
+  useEffect(() => {
+    return () => {
+      if (bgAudioRef.current) {
+        bgAudioRef.current.pause();
+        bgAudioRef.current = null;
+      }
     };
   }, []);
 
