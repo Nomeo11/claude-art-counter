@@ -195,8 +195,6 @@ const NFTLiveView = () => {
       fontFamily: '"Space Mono", monospace',
       overflow: 'hidden',
     }}>
-      {/* Mute toggle */}
-      <div style={{
         position: 'absolute',
         top: 10,
         right: 14,
