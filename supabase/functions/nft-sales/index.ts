@@ -227,7 +227,7 @@ async function fetchRaribleSales(): Promise<any[]> {
       })
     );
 
-    return activities.map((a: any, i: number) => {
+    const result = activities.map((a: any, i: number) => {
       const priceValue = parseFloat(a.price || '0');
       const idPrefix = (a.id || '').split(':')[0]?.toUpperCase();
       let chain = 'ethereum';
