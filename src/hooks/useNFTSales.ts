@@ -11,6 +11,7 @@ export interface NFTSale {
   timestamp: number;
   image?: string;
   imageCandidates?: string[];
+  mediaType?: string;
 }
 
 type SaleCallback = (sale: NFTSale) => void;
@@ -46,6 +47,7 @@ async function fetchSales(): Promise<NFTSale[]> {
           timestamp: Date.now(),
           image: imageCandidates[0] || s.image || undefined,
           imageCandidates,
+          mediaType: typeof s.mediaType === 'string' ? s.mediaType : undefined,
         };
       });
   } catch (e) {
@@ -61,7 +63,6 @@ export function useNFTSales(onSale: SaleCallback) {
 
   const poll = useCallback(async () => {
     const sales = await fetchSales();
-    // Emit each sale individually with a small stagger to avoid audio overlap
     sales.forEach((sale, i) => {
       setTimeout(() => onSaleRef.current(sale), i * 300);
     });
@@ -71,7 +72,6 @@ export function useNFTSales(onSale: SaleCallback) {
     poll();
 
     function schedule() {
-      // Poll every 3 seconds for near-real-time feel
       intervalRef.current = setTimeout(async () => {
         await poll();
         schedule();

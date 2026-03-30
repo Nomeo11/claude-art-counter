@@ -12,7 +12,7 @@ const SOLANA_COLLECTIONS = [
   'solana_monkey_business', 'tensorians', 'claynosaurz',
 ];
 
-function normalizeTezosImageUrl(url?: string): string {
+function normalizeTezosMediaUrl(url?: string): string {
   if (!url) return '';
 
   const trimmed = url.trim();
@@ -34,10 +34,10 @@ function normalizeTezosImageUrl(url?: string): string {
 }
 
 function getTezosImageCandidates(token: any): string[] {
-  // Prefer display_uri (actual artwork) over thumbnail_uri (often a generic placeholder)
   return Array.from(new Set([
-    normalizeTezosImageUrl(token?.display_uri),
-    normalizeTezosImageUrl(token?.thumbnail_uri),
+    normalizeTezosMediaUrl(token?.artifact_uri),
+    normalizeTezosMediaUrl(token?.thumbnail_uri),
+    normalizeTezosMediaUrl(token?.display_uri),
   ].filter(Boolean)));
 }
 
@@ -100,7 +100,7 @@ async function fetchTezosSales(): Promise<any[]> {
   try {
     const query = `{
       event(where: {price_xtz: {_is_null: false, _gt: 0}}, order_by: {timestamp: desc}, limit: 10) {
-        token { name display_uri thumbnail_uri }
+        token { name display_uri thumbnail_uri artifact_uri mime }
         price_xtz
         timestamp
       }
@@ -117,6 +117,7 @@ async function fetchTezosSales(): Promise<any[]> {
     return events.map((e: any, i: number) => {
       const token = e.token || {};
       const imageCandidates = getTezosImageCandidates(token);
+      const mediaType = typeof token?.mime === 'string' ? token.mime.toLowerCase() : '';
       return {
         id: `tez-${e.timestamp}-${i}`,
         collection: token.name || 'Tezos NFT',
@@ -127,6 +128,7 @@ async function fetchTezosSales(): Promise<any[]> {
         marketplace: 'OBJKT',
         image: imageCandidates[0] || '',
         imageCandidates,
+        mediaType: mediaType || undefined,
       };
     }).filter((s: any) => s.price > 0 && s.imageCandidates.length > 0);
   } catch { return []; }
@@ -151,7 +153,6 @@ serve(async (req) => {
         fetchTezosSales(),
       ]);
       sales = [...eth, ...sol, ...tez];
-      // Shuffle for variety
       sales.sort(() => Math.random() - 0.5);
     } else if (chain === 'ethereum') {
       sales = await fetchEthSales(pageKey);
