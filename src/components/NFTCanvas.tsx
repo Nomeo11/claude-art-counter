@@ -240,7 +240,11 @@ const NFTLiveView = () => {
 
   const playSalePing = useCallback((chain?: string) => {
     if (mutedRef.current) return;
-    const src = chain === 'tezos' ? '/sounds/tezos-sale.wav' : '/sounds/sale-ping.wav';
+    const srcMap: Record<string, string> = {
+      tezos: '/sounds/tezos-sale.wav',
+      solana: '/sounds/solana-sale.wav',
+    };
+    const src = srcMap[chain || ''] || '/sounds/sale-ping.wav';
     const audio = new Audio(src);
     audio.volume = 0.15;
     audio.play().catch(() => {});
