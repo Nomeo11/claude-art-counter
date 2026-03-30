@@ -6,8 +6,8 @@ const corsHeaders = {
 };
 
 const IPFS_GATEWAYS = [
-  'https://cf-ipfs.com/ipfs/',
   'https://cloudflare-ipfs.com/ipfs/',
+  'https://nftstorage.link/ipfs/',
   'https://gateway.pinata.cloud/ipfs/',
   'https://dweb.link/ipfs/',
   'https://ipfs.io/ipfs/',
