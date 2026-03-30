@@ -272,6 +272,7 @@ serve(async (req) => {
     const url = new URL(req.url);
     const chain = url.searchParams.get('chain') || 'all';
     const pageKey = url.searchParams.get('pageKey') || undefined;
+    const includeRarible = url.searchParams.get('rarible') === '1';
 
     let sales: any[] = [];
 
@@ -283,18 +284,20 @@ serve(async (req) => {
       ]).catch(() => [] as unknown as T);
     }
 
+    const rariblePromise = includeRarible ? withTimeout(fetchRaribleSales()) : Promise.resolve([]);
+
     if (chain === 'all') {
       const [eth, sol, tez, fxhash, rarible] = await Promise.all([
         withTimeout(fetchEthSales(pageKey)),
         withTimeout(fetchSolanaSales()),
         withTimeout(fetchTezosSales()),
         withTimeout(fetchFxhashSales()),
-        withTimeout(fetchRaribleSales()),
+        rariblePromise,
       ]);
       sales = [...eth, ...sol, ...tez, ...fxhash, ...rarible];
       sales.sort(() => Math.random() - 0.5);
     } else if (chain === 'ethereum') {
-      const [eth, rarible] = await Promise.all([withTimeout(fetchEthSales(pageKey)), withTimeout(fetchRaribleSales())]);
+      const [eth, rarible] = await Promise.all([withTimeout(fetchEthSales(pageKey)), rariblePromise]);
       sales = [...eth, ...rarible.filter(s => s.chain === 'ethereum')];
     } else if (chain === 'solana') {
       const [sol, rarible] = await Promise.all([withTimeout(fetchSolanaSales()), withTimeout(fetchRaribleSales())]);
