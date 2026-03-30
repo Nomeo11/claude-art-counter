@@ -4,6 +4,7 @@ export interface NFTSale {
   id: string;
   collection: string;
   tokenName: string;
+  artist?: string;
   price: number;
   currency: string;
   chain: string;
