@@ -20,12 +20,12 @@ type SaleCallback = (sale: NFTSale) => void;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const seenIds = new Set<string>();
 let pollCount = 0;
+const RARIBLE_INTERVAL = 8; // include Rarible every 8th poll (8 * 3s = ~24s)
 
 async function fetchSales(): Promise<NFTSale[]> {
   try {
     pollCount++;
-    // Only include Rarible (OpenSea/Zora) every 10th poll (~100s) to avoid rate limits
-    const includeRarible = pollCount % 10 === 1;
+    const includeRarible = pollCount % RARIBLE_INTERVAL === 1;
     const url = `${SUPABASE_URL}/functions/v1/nft-sales?chain=all${includeRarible ? '&rarible=1' : ''}`
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -82,7 +82,7 @@ export function useNFTSales(onSale: SaleCallback) {
       intervalRef.current = setTimeout(async () => {
         await poll();
         schedule();
-      }, 10000);
+      }, 3000);
     }
     schedule();
 
