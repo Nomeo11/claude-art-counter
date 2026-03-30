@@ -500,7 +500,7 @@ const NFTLiveView = () => {
                   </div>
                 )}
                 {sales.map((sale, idx) => (
-                  <SaleCard key={`${sale.id}-${sale.timestamp}-${idx}`} sale={sale} />
+                  <SaleCard key={`${sale.id}-${sale.timestamp}-${idx}`} sale={sale} isWhaleSale={whaleIds.has(sale.id)} />
                 ))}
               </div>
             </div>
