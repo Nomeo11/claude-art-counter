@@ -10,6 +10,7 @@ interface ChainStats {
 
 interface Props {
   stats: Record<string, number>;
+  onClose: () => void;
 }
 
 const CHAINS: { key: string; label: string; color: string; symbol: string }[] = [
