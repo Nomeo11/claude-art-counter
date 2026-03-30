@@ -28,8 +28,14 @@ const SEEN_TTL = 90_000; // forget seen IDs after 90s so feed stays alive
 async function fetchSales(): Promise<NFTSale[]> {
   try {
     pollCount++;
+    // Prune old seen IDs to keep feed alive
+    const now = Date.now();
+    for (const [id, ts] of seenIds) {
+      if (now - ts > SEEN_TTL) seenIds.delete(id);
+    }
+
     const includeRarible = pollCount % RARIBLE_INTERVAL === 1;
-    const url = `${SUPABASE_URL}/functions/v1/nft-sales?chain=all${includeRarible ? '&rarible=1' : ''}`
+    const url = `${SUPABASE_URL}/functions/v1/nft-sales?chain=all${includeRarible ? '&rarible=1' : ''}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -38,7 +44,7 @@ async function fetchSales(): Promise<NFTSale[]> {
     return data.sales
       .filter((s: any) => !seenIds.has(s.id) && (s.image || s.imageCandidates?.length))
       .map((s: any) => {
-        seenIds.add(s.id);
+        seenIds.set(s.id, Date.now());
         const imageCandidates = Array.isArray(s.imageCandidates)
           ? s.imageCandidates.filter(Boolean)
           : s.image
