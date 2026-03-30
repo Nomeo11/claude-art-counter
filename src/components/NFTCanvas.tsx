@@ -444,8 +444,8 @@ const NFTLiveView = () => {
                 fontFamily: '"Space Mono", monospace',
                 fontSize: 80,
                 fontWeight: 700,
-                color: '#00ff88',
-                textShadow: '0 0 40px rgba(0,255,136,0.6), 0 0 80px rgba(0,255,136,0.3), 0 0 120px rgba(0,255,136,0.1)',
+                color: '#FFA000',
+                textShadow: '0 0 40px rgba(255,160,0,0.6), 0 0 80px rgba(255,160,0,0.3), 0 0 120px rgba(255,160,0,0.1)',
                 lineHeight: 1,
                 animation: 'countdown-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
               }}
