@@ -300,7 +300,7 @@ serve(async (req) => {
       const [eth, rarible] = await Promise.all([withTimeout(fetchEthSales(pageKey)), rariblePromise]);
       sales = [...eth, ...rarible.filter(s => s.chain === 'ethereum')];
     } else if (chain === 'solana') {
-      const [sol, rarible] = await Promise.all([withTimeout(fetchSolanaSales()), withTimeout(fetchRaribleSales())]);
+      const [sol, rarible] = await Promise.all([withTimeout(fetchSolanaSales()), rariblePromise]);
       sales = [...sol, ...rarible.filter(s => s.chain === 'solana')];
     } else if (chain === 'tezos') {
       const [tez, fxhash] = await Promise.all([withTimeout(fetchTezosSales()), withTimeout(fetchFxhashSales())]);
