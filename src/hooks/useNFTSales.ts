@@ -4,6 +4,7 @@ export interface NFTSale {
   id: string;
   collection: string;
   tokenName: string;
+  artist?: string;
   price: number;
   currency: string;
   chain: string;
@@ -40,6 +41,7 @@ async function fetchSales(): Promise<NFTSale[]> {
           id: s.id,
           collection: s.collection,
           tokenName: s.tokenName,
+          artist: s.artist || undefined,
           price: s.price,
           currency: s.currency || 'ETH',
           chain: s.chain || 'ethereum',

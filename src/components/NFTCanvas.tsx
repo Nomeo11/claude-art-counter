@@ -131,10 +131,24 @@ function SaleCard({ sale }: { sale: NFTSale }) {
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          marginBottom: 4,
+          marginBottom: sale.artist ? 2 : 4,
         }}>
           {sale.collection}
         </div>
+        {sale.artist && (
+          <div style={{
+            fontFamily: '"Space Mono", monospace',
+            fontSize: 9,
+            color: config.color,
+            opacity: 0.7,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            marginBottom: 4,
+          }}>
+            by {sale.artist}
+          </div>
+        )}
         <div style={{
           fontFamily: '"Space Mono", monospace',
           fontSize: 15,
