@@ -154,9 +154,13 @@ const NFTLiveView = () => {
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
   const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
+  const bgAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     mutedRef.current = muted;
+    if (bgAudioRef.current) {
+      bgAudioRef.current.muted = muted;
+    }
   }, [muted]);
 
   useEffect(() => {
@@ -165,6 +169,22 @@ const NFTLiveView = () => {
       audio.volume = 0.5;
       audioRefs.current[chain] = audio;
     }
+
+    const bgAudio = new Audio('/sounds/bg-loop.wav');
+    bgAudio.loop = true;
+    bgAudio.volume = 0.15;
+    bgAudioRef.current = bgAudio;
+
+    const startBg = () => {
+      bgAudio.play().catch(() => {});
+      document.removeEventListener('click', startBg);
+    };
+    document.addEventListener('click', startBg);
+
+    return () => {
+      document.removeEventListener('click', startBg);
+      bgAudio.pause();
+    };
   }, []);
 
   const playSound = useCallback((chain: string) => {
