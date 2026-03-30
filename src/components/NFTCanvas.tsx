@@ -193,7 +193,7 @@ const NFTLiveView = () => {
 
     const bgAudio = new Audio('/sounds/bg-loop.wav');
     bgAudio.loop = true;
-    bgAudio.volume = 0.15;
+    bgAudio.volume = 0.35;
     bgAudioRef.current = bgAudio;
     bgAudio.play().catch(() => {});
 
