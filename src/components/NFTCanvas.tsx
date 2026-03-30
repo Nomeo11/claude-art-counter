@@ -174,15 +174,9 @@ const NFTLiveView = () => {
     bgAudio.loop = true;
     bgAudio.volume = 0.15;
     bgAudioRef.current = bgAudio;
-
-    const startBg = () => {
-      bgAudio.play().catch(() => {});
-      document.removeEventListener('click', startBg);
-    };
-    document.addEventListener('click', startBg);
+    bgAudio.play().catch(() => {});
 
     return () => {
-      document.removeEventListener('click', startBg);
       bgAudio.pause();
     };
   }, []);
