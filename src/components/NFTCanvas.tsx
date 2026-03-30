@@ -312,9 +312,21 @@ const NFTLiveView = () => {
     if (countdown === null && !bgAudioRef.current) {
       const bgAudio = new Audio('/sounds/bg-loop.wav');
       bgAudio.loop = true;
-      bgAudio.volume = 0.35;
+      bgAudio.volume = 0.28;
       bgAudioRef.current = bgAudio;
       if (!mutedRef.current) bgAudio.play().catch(() => {});
+
+      // Start ambient texture ~15s after sales begin
+      ambientTimerRef.current = setTimeout(() => {
+        if (!ambientAudioRef.current) {
+          const ambient = new Audio('/sounds/ambient-texture.wav');
+          ambient.loop = true;
+          ambient.volume = 0.12;
+          ambient.muted = mutedRef.current;
+          ambientAudioRef.current = ambient;
+          ambient.play().catch(() => {});
+        }
+      }, 15000);
     }
   }, [countdown]);
 
