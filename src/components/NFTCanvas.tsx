@@ -489,9 +489,9 @@ const NFTLiveView = () => {
           pointerEvents: 'none',
           zIndex: 50,
           overflow: 'hidden',
-          background: 'transparent',
         }}>
           <video
+            key={whaleSwim}
             src="/whale-swim.webm"
             autoPlay
             muted
@@ -500,15 +500,26 @@ const NFTLiveView = () => {
               position: 'absolute',
               width: 320,
               height: 320,
-              bottom: 0,
-              left: -320,
-              animation: 'whale-swim-across 4.5s ease-in-out forwards',
+              filter: 'brightness(1.3) drop-shadow(0 0 20px rgba(100,180,255,0.6)) drop-shadow(0 0 40px rgba(100,180,255,0.3))',
+              ...(whaleSwim === 'left' ? {
+                bottom: 0,
+                left: -320,
+                animation: 'whale-swim-left-to-right 7s ease-in-out forwards',
+              } : {
+                bottom: 0,
+                right: -320,
+                animation: 'whale-swim-right-to-left 7s ease-in-out forwards',
+              }),
             }}
           />
           <style>{`
-            @keyframes whale-swim-across {
+            @keyframes whale-swim-left-to-right {
               0% { transform: translate(0, 0) scaleX(-1); }
               100% { transform: translate(calc(100vw + 640px), calc(-100vh - 320px)) scaleX(-1); }
+            }
+            @keyframes whale-swim-right-to-left {
+              0% { transform: translate(0, 0); }
+              100% { transform: translate(calc(-100vw - 640px), calc(-100vh - 320px)); }
             }
           `}</style>
         </div>
