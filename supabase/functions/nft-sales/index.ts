@@ -12,6 +12,34 @@ const SOLANA_COLLECTIONS = [
   'solana_monkey_business', 'tensorians', 'claynosaurz',
 ];
 
+function normalizeTezosImageUrl(url?: string): string {
+  if (!url) return '';
+
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+
+  if (trimmed.startsWith('ipfs://ipfs/')) {
+    return `https://ipfs.io/ipfs/${trimmed.replace('ipfs://ipfs/', '')}`;
+  }
+
+  if (trimmed.startsWith('ipfs://')) {
+    return `https://ipfs.io/ipfs/${trimmed.replace('ipfs://', '')}`;
+  }
+
+  if (trimmed.startsWith('/ipfs/')) {
+    return `https://ipfs.io${trimmed}`;
+  }
+
+  return trimmed;
+}
+
+function getTezosImageCandidates(token: any): string[] {
+  return Array.from(new Set([
+    normalizeTezosImageUrl(token?.thumbnail_uri),
+    normalizeTezosImageUrl(token?.display_uri),
+  ].filter(Boolean)));
+}
+
 async function fetchEthSales(pageKey?: string): Promise<any[]> {
   try {
     const url = `${ALCHEMY_BASE}/getNFTSales?fromBlock=0&toBlock=latest&limit=10&order=desc${pageKey ? `&pageKey=${pageKey}` : ''}`;
@@ -87,10 +115,7 @@ async function fetchTezosSales(): Promise<any[]> {
 
     return events.map((e: any, i: number) => {
       const token = e.token || {};
-      let img = token.thumbnail_uri || token.display_uri || '';
-      if (img.startsWith('ipfs://')) {
-        img = img.replace('ipfs://', 'https://ipfs.io/ipfs/');
-      }
+      const imageCandidates = getTezosImageCandidates(token);
       return {
         id: `tez-${e.timestamp}-${i}`,
         collection: token.name || 'Tezos NFT',
@@ -99,9 +124,10 @@ async function fetchTezosSales(): Promise<any[]> {
         currency: 'XTZ',
         chain: 'tezos',
         marketplace: 'OBJKT',
-        image: img,
+        image: imageCandidates[0] || '',
+        imageCandidates,
       };
-    }).filter((s: any) => s.price > 0);
+    }).filter((s: any) => s.price > 0 && s.imageCandidates.length > 0);
   } catch { return []; }
 }
 

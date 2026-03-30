@@ -14,9 +14,16 @@ const IPFS_GATEWAYS = [
 ];
 
 function getIpfsUrls(originalUrl: string): string[] {
-  const ipfsMatch = originalUrl.match(/\/ipfs\/(.+)$/);
-  if (!ipfsMatch) return [originalUrl];
-  const cid = ipfsMatch[1];
+  const normalizedUrl = originalUrl.trim();
+  const ipfsSchemeMatch = normalizedUrl.match(/^ipfs:\/\/(?:ipfs\/)?(.+)$/i);
+  if (ipfsSchemeMatch) {
+    const cid = ipfsSchemeMatch[1];
+    return IPFS_GATEWAYS.map(gw => `${gw}${cid}`);
+  }
+
+  const ipfsPathMatch = normalizedUrl.match(/\/ipfs\/(.+)$/i);
+  if (!ipfsPathMatch) return [normalizedUrl];
+  const cid = ipfsPathMatch[1];
   return IPFS_GATEWAYS.map(gw => `${gw}${cid}`);
 }
 

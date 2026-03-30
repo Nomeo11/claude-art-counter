@@ -10,6 +10,7 @@ export interface NFTSale {
   marketplace: string;
   timestamp: number;
   image?: string;
+  imageCandidates?: string[];
 }
 
 type SaleCallback = (sale: NFTSale) => void;
@@ -25,9 +26,15 @@ async function fetchSales(): Promise<NFTSale[]> {
     if (!data.sales || !Array.isArray(data.sales)) return [];
 
     return data.sales
-      .filter((s: any) => !seenIds.has(s.id) && s.image)
+      .filter((s: any) => !seenIds.has(s.id) && (s.image || s.imageCandidates?.length))
       .map((s: any) => {
         seenIds.add(s.id);
+        const imageCandidates = Array.isArray(s.imageCandidates)
+          ? s.imageCandidates.filter(Boolean)
+          : s.image
+            ? [s.image]
+            : [];
+
         return {
           id: s.id,
           collection: s.collection,
@@ -37,7 +44,8 @@ async function fetchSales(): Promise<NFTSale[]> {
           chain: s.chain || 'ethereum',
           marketplace: s.marketplace,
           timestamp: Date.now(),
-          image: s.image || undefined,
+          image: imageCandidates[0] || s.image || undefined,
+          imageCandidates,
         };
       });
   } catch (e) {
