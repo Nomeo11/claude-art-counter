@@ -187,7 +187,7 @@ const NFTLiveView = () => {
   useEffect(() => {
     for (const [chain, src] of Object.entries(CHAIN_SOUNDS)) {
       const audio = new Audio(src);
-      audio.volume = 0.5;
+      audio.volume = 0.15;
       audioRefs.current[chain] = audio;
     }
 
