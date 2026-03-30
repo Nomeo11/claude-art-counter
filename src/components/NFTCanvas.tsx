@@ -198,6 +198,8 @@ const NFTLiveView = () => {
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ambientAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ambientTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     mutedRef.current = muted;
