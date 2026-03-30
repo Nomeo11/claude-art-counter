@@ -513,7 +513,7 @@ const NFTLiveView = () => {
         }}>
           <video
             key={whaleSwim}
-            src="/whale-swim.webm"
+            src="/videos/whale-swim.mp4"
             autoPlay
             muted
             playsInline
