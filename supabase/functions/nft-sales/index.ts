@@ -198,7 +198,11 @@ async function fetchRaribleSales(): Promise<any[]> {
       headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey, 'Referer': referer },
       body: JSON.stringify({ filter: { types: ['SELL'] }, size: 5, sort: 'LATEST' }),
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.error(`Rarible API ${res.status}: ${errText.slice(0, 200)}`);
+      return [];
+    }
     const data = await res.json();
     const activities = data?.activities || [];
 
