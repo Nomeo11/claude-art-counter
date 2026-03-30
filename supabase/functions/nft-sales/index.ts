@@ -101,7 +101,7 @@ async function fetchTezosSales(): Promise<any[]> {
   try {
     const query = `{
       event(where: {price_xtz: {_is_null: false, _gt: 0}}, order_by: {timestamp: desc}, limit: 10) {
-        token { name display_uri thumbnail_uri artifact_uri mime }
+        token { name display_uri thumbnail_uri artifact_uri mime creators { holder { alias } } }
         price_xtz
         timestamp
       }
