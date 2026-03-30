@@ -60,7 +60,7 @@ serve(async (req) => {
 
     for (const tryUrl of urls) {
       try {
-        const res = await fetchWithTimeout(tryUrl, 5000);
+        const res = await fetchWithTimeout(tryUrl, 2000);
         if (res.ok) {
           const contentType = res.headers.get('content-type') || 'image/png';
           // Reject non-image content (HTML pages, videos, etc.)
