@@ -275,6 +275,27 @@ const NFTLiveView = () => {
   }, [playWhaleAlert, playSalePing]);
 
   const { countdown } = useNFTSales(handleSale);
+  const countdownAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (countdown !== null && countdown > 0) {
+      // Play countdown tick sound
+      if (countdownAudioRef.current) {
+        countdownAudioRef.current.pause();
+        countdownAudioRef.current.currentTime = 0;
+      }
+      const audio = new Audio('/sounds/countdown.wav');
+      audio.volume = 0.4;
+      countdownAudioRef.current = audio;
+      audio.play().catch(() => {});
+    }
+    if (countdown === 0 || countdown === null) {
+      if (countdownAudioRef.current) {
+        countdownAudioRef.current.pause();
+        countdownAudioRef.current = null;
+      }
+    }
+  }, [countdown]);
 
   const total = stats.ethereum + stats.solana + stats.tezos;
 
