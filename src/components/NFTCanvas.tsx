@@ -18,6 +18,20 @@ const CHAIN_CONFIG: Record<string, { label: string; color: string; symbol: strin
   tezos:    { label: 'TEZOS',    color: '#2C7DF7', symbol: 'ꜩ', glow: 'rgba(44,125,247,0.3)' },
 };
 
+// Approximate USD prices for whale detection ($1000+)
+const USD_PRICES: Record<string, number> = {
+  ETH: 2050,
+  SOL: 145,
+  XTZ: 0.85,
+  MATIC: 0.55,
+  USD: 1,
+};
+
+function isWhale(price: number, currency: string): boolean {
+  const usdRate = USD_PRICES[currency] || 1;
+  return price * usdRate >= 1000;
+}
+
 function formatPrice(price: number, symbol: string): string {
   if (price < 0.01) return `${symbol} ${price.toFixed(4)}`;
   if (price >= 100) return `${symbol} ${price.toFixed(0)}`;
@@ -203,6 +217,35 @@ const NFTLiveView = () => {
     };
   }, []);
 
+  // Sound refs for sale effects
+  const whaleAudioRef = useRef<HTMLAudioElement | null>(null);
+  const salePingRef = useRef<HTMLAudioElement | null>(null);
+
+  const playWhaleAlert = useCallback(() => {
+    if (mutedRef.current) return;
+    // Stop any existing whale audio
+    if (whaleAudioRef.current) {
+      whaleAudioRef.current.pause();
+      whaleAudioRef.current.currentTime = 0;
+    }
+    const audio = new Audio('/sounds/whale-alert.wav');
+    audio.volume = 0.4;
+    whaleAudioRef.current = audio;
+    audio.play().catch(() => {});
+    // Stop after 5 seconds
+    setTimeout(() => {
+      audio.pause();
+      audio.currentTime = 0;
+    }, 5000);
+  }, []);
+
+  const playSalePing = useCallback(() => {
+    if (mutedRef.current) return;
+    const audio = new Audio('/sounds/sale-ping.wav');
+    audio.volume = 0.15;
+    audio.play().catch(() => {});
+  }, []);
+
   const handleSale = useCallback((sale: NFTSale) => {
     const chain = CHAIN_ORDER.includes(sale.chain as any) ? sale.chain : 'ethereum';
     statsRef.current[chain] = (statsRef.current[chain] || 0) + 1;
@@ -213,11 +256,18 @@ const NFTLiveView = () => {
     });
     setStats({ ...statsRef.current });
 
+    // Play sound based on value
+    if (isWhale(sale.price, sale.currency)) {
+      playWhaleAlert();
+    } else {
+      playSalePing();
+    }
+
     requestAnimationFrame(() => {
       const el = colRefs.current[chain];
       if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
     });
-  }, []);
+  }, [playWhaleAlert, playSalePing]);
 
   useNFTSales(handleSale);
 
