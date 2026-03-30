@@ -20,7 +20,9 @@ type SaleCallback = (sale: NFTSale) => void;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const seenIds = new Set<string>();
 let pollCount = 0;
+let isFirstPoll = true;
 const RARIBLE_INTERVAL = 10; // include Rarible every 10th poll (10 * 3s = 30s)
+const INITIAL_MAX_PER_CHAIN = 2; // limit catch-up on first load
 
 async function fetchSales(): Promise<NFTSale[]> {
   try {
@@ -63,13 +65,26 @@ async function fetchSales(): Promise<NFTSale[]> {
   }
 }
 
+function limitInitialBatch(sales: NFTSale[]): NFTSale[] {
+  // On first poll, only show a few per chain to avoid a massive catch-up flood
+  const counts: Record<string, number> = {};
+  return sales.filter(s => {
+    counts[s.chain] = (counts[s.chain] || 0) + 1;
+    return counts[s.chain] <= INITIAL_MAX_PER_CHAIN;
+  });
+}
+
 export function useNFTSales(onSale: SaleCallback) {
   const onSaleRef = useRef(onSale);
   onSaleRef.current = onSale;
   const intervalRef = useRef<ReturnType<typeof setTimeout>>();
 
   const poll = useCallback(async () => {
-    const sales = await fetchSales();
+    let sales = await fetchSales();
+    if (isFirstPoll) {
+      sales = limitInitialBatch(sales);
+      isFirstPoll = false;
+    }
     sales.forEach((sale, i) => {
       setTimeout(() => onSaleRef.current(sale), i * 300);
     });
