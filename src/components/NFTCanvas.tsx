@@ -243,17 +243,27 @@ const NFTLiveView = () => {
       fontFamily: '"Space Mono", monospace',
       overflow: 'hidden',
     }}>
-      {/* Mute toggle */}
+      {/* Top bar */}
       <div style={{
-        position: 'absolute',
-        top: 10,
-        right: 14,
-        zIndex: 10,
-        cursor: 'pointer',
-        color: muted ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.6)',
-        transition: 'color 0.2s',
-      }} onClick={() => setMuted(m => !m)}>
-        {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '8px 14px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src={logoImg} alt="CC" style={{ width: 28, height: 28, borderRadius: 4 }} />
+          <span style={{ fontFamily: '"Space Mono", monospace', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: 1 }}>
+            LIVE SALES
+          </span>
+        </div>
+        <div
+          style={{ cursor: 'pointer', color: muted ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.6)', transition: 'color 0.2s' }}
+          onClick={() => setMuted(m => !m)}
+        >
+          {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+        </div>
       </div>
 
       {/* 3-column grid */}
