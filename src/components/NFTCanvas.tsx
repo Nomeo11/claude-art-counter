@@ -206,22 +206,6 @@ const NFTLiveView = () => {
     }
   }, [muted]);
 
-  // Start bg music only after countdown ends
-  useEffect(() => {
-    if (countdown === null && !bgAudioRef.current) {
-      const bgAudio = new Audio('/sounds/bg-loop.wav');
-      bgAudio.loop = true;
-      bgAudio.volume = 0.35;
-      bgAudioRef.current = bgAudio;
-      bgAudio.play().catch(() => {});
-    }
-    return () => {
-      if (bgAudioRef.current && countdown === null) {
-        // cleanup on unmount only
-      }
-    };
-  }, [countdown]);
-
   // Cleanup bg audio on unmount
   useEffect(() => {
     return () => {
