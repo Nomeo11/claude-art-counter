@@ -200,7 +200,7 @@ const NFTLiveView = () => {
   const mutedRef = useRef(false);
   const [showChart, setShowChart] = useState(false);
   const [whaleFlash, setWhaleFlash] = useState(false);
-  const [whaleSwim, setWhaleSwim] = useState(false);
+  const [whaleSwim, setWhaleSwim] = useState<false | 'left' | 'right'>(false);
   const whaleSwimRef = useRef(false);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const ambientAudioRef = useRef<HTMLAudioElement | null>(null);
