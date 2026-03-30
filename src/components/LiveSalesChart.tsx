@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { X } from 'lucide-react';
 
 interface ChainStats {
   chain: string;
