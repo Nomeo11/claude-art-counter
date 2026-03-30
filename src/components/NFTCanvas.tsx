@@ -537,12 +537,12 @@ const NFTLiveView = () => {
           />
           <style>{`
             @keyframes whale-swim-left-to-right {
-              0% { transform: translate(0, 0); }
-              100% { transform: translate(calc(100vw + 640px), calc(-100vh - 320px)); }
+              0% { transform: translate(0, 0) scaleX(-1); }
+              100% { transform: translate(calc(100vw + 640px), calc(-100vh - 320px)) scaleX(-1); }
             }
             @keyframes whale-swim-right-to-left {
-              0% { transform: translate(0, 0) scaleX(-1); }
-              100% { transform: translate(calc(-100vw - 640px), calc(-100vh - 320px)) scaleX(-1); }
+              0% { transform: translate(0, 0); }
+              100% { transform: translate(calc(-100vw - 640px), calc(-100vh - 320px)); }
             }
             }
           `}</style>
