@@ -7,6 +7,7 @@ const corsHeaders = {
 
 const ALCHEMY_API_KEY = Deno.env.get('ALCHEMY_API_KEY') || 'demo';
 const ALCHEMY_BASE = `https://eth-mainnet.g.alchemy.com/nft/v3/${ALCHEMY_API_KEY}`;
+const RESERVOIR_BASE = 'https://api.reservoir.tools';
 
 const SOLANA_COLLECTIONS = [
   'mad_lads', 'degods', 'okay_bears', 'famous_fox_federation',
