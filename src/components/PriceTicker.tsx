@@ -80,7 +80,7 @@ const PriceTicker = () => {
             <span style={{ color: p.color, fontWeight: 700 }}>{p.symbol}</span>
             <span style={{ color: 'rgba(255,255,255,0.7)' }}>{formatUsd(p.price)}</span>
             <span style={{
-              color: p.change24h >= 0 ? '#00ff88' : '#ff4444',
+              color: p.change24h >= 0 ? '#FF8C00' : '#ff4444',
               fontSize: 10,
             }}>
               {p.change24h >= 0 ? '▲' : '▼'} {Math.abs(p.change24h).toFixed(1)}%
