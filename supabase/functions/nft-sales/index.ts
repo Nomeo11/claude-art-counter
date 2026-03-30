@@ -37,38 +37,102 @@ function getTezosImageCandidates(token: any): string[] {
   ].filter(Boolean)));
 }
 
-// ─── Ethereum: Alchemy getAssetTransfers (live ERC721 sales) ───
+// WETH contract
+const WETH = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
+
+// Known marketplace router contracts
+const MARKETPLACE_MAP: Record<string, string> = {
+  // OpenSea Seaport versions
+  '0x00000000000000adc04c56bf30ac9d3c0aaf14dc': 'OPENSEA',
+  '0x00000000006c3852cbef3e08e8df289169ede581': 'OPENSEA',
+  '0x0000000000000068f116a894984e2db1123eb395': 'OPENSEA',
+  '0x00000000000001ad428e4906ae43d8f9852d0dd6': 'OPENSEA',
+  '0x0000000000000ad24e80fd803c6ac37206a95221': 'OPENSEA',
+  // Blur
+  '0x39da41747a83aee658334415666f3ef92dd0d541': 'BLUR',
+  '0xb2ecfe4e4d61f8790bbb9de2d1259b9e2410cea5': 'BLUR',
+  '0x29469395eaf6f95920e59f858042f0e28d98a20b': 'BLUR',
+  '0x000000000000ad05ccc4f10045630fb830b95127': 'BLUR',
+  '0x0000000000a39bb272e79075ade125fd351887ac': 'BLUR',  // Blur Blend
+  // X2Y2
+  '0x74312363e45dcaba76c59ec49a7aa8a65a67eed3': 'X2Y2',
+  // LooksRare
+  '0x59728544b08ab483533076417fbbb2fd0b17556a': 'LOOKSRARE',
+  '0x0000000000e655fae4d56241588680f86e3b2377': 'LOOKSRARE',
+  // Sudoswap
+  '0x2b2e8cda09bba9660dca5cb6233787738ad68329': 'SUDOSWAP',
+  // Magic Eden
+  '0xa020d57ab0448ef74115c112d18a9c231cc86000': 'MAGIC EDEN',
+  // Gem (OpenSea aggregator)
+  '0x0000000035634b55f3d99b071b5a354f48e10bef': 'OPENSEA',
+  '0x83c8f28c26bf6aaca652df1dbbe0e1b56f8baba2': 'OPENSEA',
+};
+
+// ─── Ethereum: Alchemy getAssetTransfers (live ERC721 + WETH sales) ───
 async function fetchEthLiveTransfers(): Promise<any[]> {
   try {
     const alchemyRpc = `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`;
     
-    // Fetch recent ERC721 transfers
-    const res = await fetch(alchemyRpc, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0', id: 1,
-        method: 'alchemy_getAssetTransfers',
-        params: [{
-          category: ['erc721'],
-          order: 'desc',
-          maxCount: '0x1E', // 30
-          withMetadata: true,
-          excludeZeroValue: false,
-        }],
+    // Fetch ERC721 transfers AND ERC20 transfers (for WETH) in parallel
+    const [nftRes, wethRes] = await Promise.all([
+      fetch(alchemyRpc, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0', id: 1,
+          method: 'alchemy_getAssetTransfers',
+          params: [{
+            category: ['erc721'],
+            order: 'desc',
+            maxCount: '0x28', // 40
+            withMetadata: true,
+            excludeZeroValue: false,
+          }],
+        }),
       }),
-    });
-    if (!res.ok) { await res.text(); return []; }
-    const data = await res.json();
-    const transfers = data?.result?.transfers || [];
+      fetch(alchemyRpc, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0', id: 2,
+          method: 'alchemy_getAssetTransfers',
+          params: [{
+            category: ['erc20'],
+            order: 'desc',
+            maxCount: '0x32', // 50
+            withMetadata: true,
+            contractAddresses: [WETH],
+          }],
+        }),
+      }),
+    ]);
+
+    if (!nftRes.ok) { await nftRes.text(); return []; }
+    const nftData = await nftRes.json();
+    const transfers = nftData?.result?.transfers || [];
+
+    // Build WETH value map by tx hash
+    const wethMap: Record<string, number> = {};
+    if (wethRes.ok) {
+      const wethData = await wethRes.json();
+      for (const t of (wethData?.result?.transfers || [])) {
+        const val = parseFloat(t.value || '0');
+        if (val > 0.001) {
+          // Sum WETH per tx hash (some txs have multiple WETH transfers)
+          wethMap[t.hash] = Math.max(wethMap[t.hash] || 0, val);
+        }
+      }
+    } else {
+      await wethRes.text();
+    }
     
-    // Filter out mints (from zero address)
+    // Filter out mints
     const salesCandidates = transfers.filter((t: any) => 
       t.from !== '0x0000000000000000000000000000000000000000'
     );
 
-    // Get ETH values for transactions to find actual paid sales
-    const txHashes = [...new Set(salesCandidates.slice(0, 20).map((t: any) => t.hash))];
+    // Get ETH values for transactions
+    const txHashes = [...new Set(salesCandidates.slice(0, 25).map((t: any) => t.hash))];
     const txPromises = txHashes.map(hash =>
       fetch(alchemyRpc, {
         method: 'POST',
@@ -82,11 +146,12 @@ async function fetchEthLiveTransfers(): Promise<any[]> {
       if (r?.result?.hash) txMap[r.result.hash] = r.result;
     });
 
-    // Only keep transfers where the transaction had ETH value (= paid sale)
+    // Keep transfers where tx had ETH value OR had WETH transfer (Blur/WETH sales)
     const paidTransfers = salesCandidates.filter((t: any) => {
       const tx = txMap[t.hash];
       const ethValue = tx?.value ? parseInt(tx.value, 16) / 1e18 : 0;
-      return ethValue > 0.001; // filter dust
+      const wethValue = wethMap[t.hash] || 0;
+      return ethValue > 0.001 || wethValue > 0.001;
     }).slice(0, 15);
 
     // Fetch metadata for paid transfers
@@ -100,37 +165,12 @@ async function fetchEthLiveTransfers(): Promise<any[]> {
     });
     const metas = await Promise.all(metaPromises);
 
-    // Known marketplace router contracts (includes multiple versions)
-    const MARKETPLACE_MAP: Record<string, string> = {
-      // OpenSea Seaport versions
-      '0x00000000000000adc04c56bf30ac9d3c0aaf14dc': 'OPENSEA',
-      '0x00000000006c3852cbef3e08e8df289169ede581': 'OPENSEA',
-      '0x0000000000000068f116a894984e2db1123eb395': 'OPENSEA',
-      '0x00000000000001ad428e4906ae43d8f9852d0dd6': 'OPENSEA',
-      '0x0000000000000ad24e80fd803c6ac37206a95221': 'OPENSEA',
-      // Blur
-      '0x39da41747a83aee658334415666f3ef92dd0d541': 'BLUR',
-      '0xb2ecfe4e4d61f8790bbb9de2d1259b9e2410cea5': 'BLUR',
-      '0x29469395eaf6f95920e59f858042f0e28d98a20b': 'BLUR',
-      '0x000000000000ad05ccc4f10045630fb830b95127': 'BLUR',
-      // X2Y2
-      '0x74312363e45dcaba76c59ec49a7aa8a65a67eed3': 'X2Y2',
-      // LooksRare
-      '0x59728544b08ab483533076417fbbb2fd0b17556a': 'LOOKSRARE',
-      '0x0000000000e655fae4d56241588680f86e3b2377': 'LOOKSRARE',
-      // Sudoswap
-      '0x2b2e8cda09bba9660dca5cb6233787738ad68329': 'SUDOSWAP',
-      // Magic Eden
-      '0xa020d57ab0448ef74115c112d18a9c231cc86000': 'MAGIC EDEN',
-      // Gem (OpenSea aggregator)
-      '0x0000000035634b55f3d99b071b5a354f48e10bef': 'OPENSEA',
-      '0x83c8f28c26bf6aaca652df1dbbe0e1b56f8baba2': 'OPENSEA',
-    };
-
     return paidTransfers.map((t: any, i: number) => {
       const m = metas[i];
       const tx = txMap[t.hash];
       const ethValue = tx?.value ? parseInt(tx.value, 16) / 1e18 : 0;
+      const wethValue = wethMap[t.hash] || 0;
+      const price = ethValue > 0.001 ? ethValue : wethValue;
       const tokenId = t.erc721TokenId ? String(parseInt(t.erc721TokenId, 16)) : '?';
       const collection = m?.contract?.openSeaMetadata?.collectionName || m?.contract?.name || 'Unknown';
       const tokenName = m?.name || `#${tokenId}`;
@@ -138,14 +178,22 @@ async function fetchEthLiveTransfers(): Promise<any[]> {
       const timestamp = t.metadata?.blockTimestamp || '';
 
       const toAddr = tx?.to?.toLowerCase() || '';
-      // Check direct match, then check if input data starts with known selectors
       let marketplace = MARKETPLACE_MAP[toAddr] || '';
       if (!marketplace) {
         const input = (tx?.input || '').slice(0, 10).toLowerCase();
         // Seaport fulfillBasicOrder / fulfillOrder / matchOrders
         if (['0xfb0f3ee1', '0xe7acab24', '0xa8174404', '0x87201b41'].includes(input)) {
           marketplace = 'OPENSEA';
-        } else {
+        }
+        // Blur execute selectors
+        else if (['0x9a1fc3a7', '0xb3be57f8', '0x00000000'].includes(input)) {
+          marketplace = 'BLUR';
+        }
+        // If paid via WETH and not identified, likely Blur
+        else if (wethValue > 0.001 && ethValue <= 0.001) {
+          marketplace = 'BLUR';
+        }
+        else {
           marketplace = 'NFT SALE';
         }
       }
@@ -154,7 +202,7 @@ async function fetchEthLiveTransfers(): Promise<any[]> {
         id: `eth-live-${t.uniqueId}`,
         collection,
         tokenName,
-        price: ethValue,
+        price,
         currency: 'ETH',
         chain: 'ethereum',
         marketplace,
