@@ -119,10 +119,12 @@ async function fetchTezosSales(): Promise<any[]> {
       const token = e.token || {};
       const imageCandidates = getTezosImageCandidates(token);
       const mediaType = typeof token?.mime === 'string' ? token.mime.toLowerCase() : '';
+      const creatorAlias = token?.creators?.[0]?.holder?.alias || '';
       return {
         id: `tez-${e.timestamp}-${i}`,
         collection: token.name || 'Tezos NFT',
         tokenName: token.name || 'Unknown',
+        artist: creatorAlias,
         price: (e.price_xtz || 0) / 1_000_000,
         currency: 'XTZ',
         chain: 'tezos',
