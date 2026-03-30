@@ -470,7 +470,7 @@ const NFTLiveView = () => {
       </div>
 
       {/* Chart overlay */}
-      {showChart && <LiveSalesChart stats={stats} />}
+      {showChart && <LiveSalesChart stats={stats} onClose={() => setShowChart(false)} />}
 
       {/* Countdown overlay */}
       {countdown !== null && (
