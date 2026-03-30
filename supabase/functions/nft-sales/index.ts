@@ -201,7 +201,7 @@ async function fetchRaribleSales(): Promise<any[]> {
       },
       body: JSON.stringify({
         filter: { types: ['SELL'] },
-        size: 15,
+        size: 5,
         sort: 'LATEST',
       }),
     });
