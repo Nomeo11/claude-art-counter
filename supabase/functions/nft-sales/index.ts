@@ -37,49 +37,100 @@ function getTezosImageCandidates(token: any): string[] {
   ].filter(Boolean)));
 }
 
-// ─── Ethereum: Reservoir (OpenSea, Blur, LooksRare, Sudoswap, etc.) ───
-async function fetchEthSalesReservoir(): Promise<any[]> {
+// ─── Ethereum: Alchemy getAssetTransfers (LIVE data) ───
+async function fetchEthSalesLive(): Promise<any[]> {
   try {
-    const headers: Record<string, string> = { Accept: 'application/json' };
-    const reservoirKey = Deno.env.get('RESERVOIR_API_KEY');
-    if (reservoirKey) headers['x-api-key'] = reservoirKey;
-
-    const res = await fetch(`${RESERVOIR_BASE}/sales/v6?limit=15&sortBy=time`, { headers });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      console.error(`Reservoir API ${res.status}: ${errText.slice(0, 200)}`);
-      return [];
-    }
+    const alchemyRpc = `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`;
+    
+    // Get recent ERC721 transfers that involve ETH value (= sales, not free mints/transfers)
+    const res = await fetch(alchemyRpc, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1,
+        method: 'alchemy_getAssetTransfers',
+        params: [{
+          category: ['erc721'],
+          order: 'desc',
+          maxCount: '0x14', // 20
+          withMetadata: true,
+          excludeZeroValue: false,
+        }],
+      }),
+    });
+    if (!res.ok) { await res.text(); return []; }
     const data = await res.json();
-    const sales = data?.sales || [];
+    const transfers = data?.result?.transfers || [];
+    
+    // Filter to only transfers FROM non-zero addresses (not mints) 
+    const salesCandidates = transfers.filter((t: any) => 
+      t.from !== '0x0000000000000000000000000000000000000000'
+    );
 
-    return sales.map((s: any) => {
-      const price = s.price?.amount?.native || 0;
-      const currency = s.price?.currency?.symbol || 'ETH';
-      const marketplace = (s.orderSource || s.fillSource || 'unknown').replace('.io', '').replace('.xyz', '').toUpperCase();
-      const image = s.token?.image || '';
-      const collection = s.token?.collection?.name || 'Unknown';
-      const tokenName = s.token?.name || `#${s.token?.tokenId || '?'}`;
+    // Fetch metadata for each using Alchemy NFT API
+    const metaPromises = salesCandidates.slice(0, 15).map((t: any) => {
+      const contract = t.rawContract?.address;
+      const tokenId = t.erc721TokenId ? String(parseInt(t.erc721TokenId, 16)) : null;
+      if (!contract || !tokenId) return Promise.resolve(null);
+      return fetch(`${ALCHEMY_BASE}/getNFTMetadata?contractAddress=${contract}&tokenId=${tokenId}`, {
+        headers: { Accept: 'application/json' },
+      }).then(r => r.ok ? r.json() : null).catch(() => null);
+    });
+    const metas = await Promise.all(metaPromises);
+
+    // Also get ETH value for these transactions to find actual sales with prices
+    const txHashes = [...new Set(salesCandidates.slice(0, 15).map((t: any) => t.hash))];
+    const receiptPromises = txHashes.slice(0, 10).map(hash =>
+      fetch(alchemyRpc, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getTransactionByHash', params: [hash] }),
+      }).then(r => r.ok ? r.json() : null).catch(() => null)
+    );
+    const txResults = await Promise.all(receiptPromises);
+    const txMap: Record<string, any> = {};
+    txResults.forEach(r => {
+      if (r?.result?.hash) txMap[r.result.hash] = r.result;
+    });
+
+    return salesCandidates.slice(0, 15).map((t: any, i: number) => {
+      const m = metas[i];
+      const tx = txMap[t.hash];
+      const ethValue = tx?.value ? parseInt(tx.value, 16) / 1e18 : 0;
+      const tokenId = t.erc721TokenId ? String(parseInt(t.erc721TokenId, 16)) : '?';
+      const collection = m?.contract?.openSeaMetadata?.collectionName || m?.contract?.name || 'Unknown';
+      const tokenName = m?.name || `#${tokenId}`;
+      const image = m?.image?.cachedUrl || m?.image?.thumbnailUrl || m?.image?.originalUrl || '';
+      const timestamp = t.metadata?.blockTimestamp || '';
+
+      // Try to identify marketplace from tx.to address
+      let marketplace = 'ETHEREUM';
+      const toAddr = tx?.to?.toLowerCase() || '';
+      if (toAddr === '0x00000000000000adc04c56bf30ac9d3c0aaf14dc') marketplace = 'OPENSEA';
+      else if (toAddr === '0x39da41747a83aee658334415666f3ef92dd0d541' || toAddr === '0xb2ecfe4e4d61f8790bbb9de2d1259b9e2410cea5') marketplace = 'BLUR';
+      else if (toAddr === '0x74312363e45dcaba76c59ec49a7aa8a65a67eed3') marketplace = 'X2Y2';
+      else if (toAddr === '0x59728544b08ab483533076417fbbb2fd0b17556a') marketplace = 'LOOKSRARE';
 
       return {
-        id: `reservoir-${s.id || s.txHash}`,
+        id: `eth-live-${t.uniqueId}`,
         collection,
         tokenName,
-        price,
-        currency: currency.toUpperCase(),
+        price: ethValue,
+        currency: 'ETH',
         chain: 'ethereum',
         marketplace,
         image,
+        timestamp,
       };
-    }).filter((s: any) => s.price > 0);
+    }).filter((s: any) => s.price > 0 && s.image);
   } catch (e) {
-    console.error('Reservoir fetch error:', e);
+    console.error('Alchemy live fetch error:', e);
     return [];
   }
 }
 
 // ─── Ethereum fallback: Alchemy getNFTSales (historical) ───
-async function fetchEthSalesAlchemy(pageKey?: string): Promise<any[]> {
+async function fetchEthSalesHistorical(pageKey?: string): Promise<any[]> {
   try {
     const url = `${ALCHEMY_BASE}/getNFTSales?fromBlock=0&toBlock=latest&limit=10&order=desc${pageKey ? `&pageKey=${pageKey}` : ''}`;
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -111,13 +162,12 @@ async function fetchEthSalesAlchemy(pageKey?: string): Promise<any[]> {
   } catch { return []; }
 }
 
-// Combined Ethereum fetch: Reservoir primary, Alchemy fallback
+// Combined Ethereum fetch: live first, historical fallback
 async function fetchEthSales(pageKey?: string): Promise<any[]> {
-  const reservoir = await fetchEthSalesReservoir();
-  if (reservoir.length >= 5) return reservoir;
-  // Fallback to Alchemy if Reservoir fails/empty
-  const alchemy = await fetchEthSalesAlchemy(pageKey);
-  return [...reservoir, ...alchemy];
+  const live = await fetchEthSalesLive();
+  if (live.length >= 3) return live;
+  const historical = await fetchEthSalesHistorical(pageKey);
+  return [...live, ...historical];
 }
 
 // ─── Solana (MagicEden — expanded collections) ───
