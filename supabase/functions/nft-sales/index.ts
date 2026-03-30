@@ -258,7 +258,9 @@ async function fetchRaribleSales(): Promise<any[]> {
         image,
       };
     }).filter((s: any) => s.price > 0);
-  } catch { return []; }
+    raribleCache = { data: result, ts: Date.now() };
+    return result;
+  } catch { return raribleCache.data; }
 }
 
 serve(async (req) => {
