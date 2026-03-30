@@ -5,7 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const ALCHEMY_BASE = 'https://eth-mainnet.g.alchemy.com/nft/v3/demo';
+const ALCHEMY_API_KEY = Deno.env.get('ALCHEMY_API_KEY') || 'demo';
+const ALCHEMY_BASE = `https://eth-mainnet.g.alchemy.com/nft/v3/${ALCHEMY_API_KEY}`;
 
 const SOLANA_COLLECTIONS = [
   'mad_lads', 'degods', 'okay_bears', 'famous_fox_federation',
