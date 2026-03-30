@@ -488,24 +488,33 @@ const NFTLiveView = () => {
           pointerEvents: 'none',
           zIndex: 50,
           overflow: 'hidden',
+          background: 'transparent',
         }}>
-          <video
-            src="/whale-swim.mp4"
-            autoPlay
-            muted
-            playsInline
-            style={{
-              position: 'absolute',
-              width: 320,
-              height: 320,
-              bottom: 0,
-              left: -320,
-              mixBlendMode: 'screen',
-              filter: 'brightness(1.3) contrast(1.2)',
-              animation: 'whale-swim-across 4.5s ease-in-out forwards',
-              opacity: 1,
-            }}
-          />
+          <div style={{
+            position: 'absolute',
+            width: 320,
+            height: 320,
+            bottom: 0,
+            left: -320,
+            animation: 'whale-swim-across 4.5s ease-in-out forwards',
+            background: '#000',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            mixBlendMode: 'screen',
+          }}>
+            <video
+              src="/whale-swim.mp4"
+              autoPlay
+              muted
+              playsInline
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                filter: 'brightness(1.8) contrast(1.4)',
+              }}
+            />
+          </div>
           <style>{`
             @keyframes whale-swim-across {
               0% { transform: translate(0, 0) scaleX(-1); }
