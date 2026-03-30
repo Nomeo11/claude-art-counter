@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNFTSales, type NFTSale } from '@/hooks/useNFTSales';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX, BarChart3 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import PriceTicker from './PriceTicker';
+import LiveSalesChart from './LiveSalesChart';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
