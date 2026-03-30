@@ -1,4 +1,4 @@
-import NFTCanvas from '@/components/NFTCanvas';
+import NFTCanvas from "@/components/NFTCanvas";
 
 const Index = () => {
   return <NFTCanvas />;
