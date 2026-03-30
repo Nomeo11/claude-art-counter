@@ -20,7 +20,7 @@ type SaleCallback = (sale: NFTSale) => void;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const seenIds = new Set<string>();
 let pollCount = 0;
-const RARIBLE_INTERVAL = 8; // include Rarible every 8th poll (8 * 3s = ~24s)
+const RARIBLE_INTERVAL = 10; // include Rarible every 10th poll (10 * 3s = 30s)
 
 async function fetchSales(): Promise<NFTSale[]> {
   try {
