@@ -34,9 +34,10 @@ function normalizeTezosImageUrl(url?: string): string {
 }
 
 function getTezosImageCandidates(token: any): string[] {
+  // Prefer display_uri (actual artwork) over thumbnail_uri (often a generic placeholder)
   return Array.from(new Set([
-    normalizeTezosImageUrl(token?.thumbnail_uri),
     normalizeTezosImageUrl(token?.display_uri),
+    normalizeTezosImageUrl(token?.thumbnail_uri),
   ].filter(Boolean)));
 }
 
