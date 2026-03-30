@@ -41,7 +41,7 @@ function formatPrice(price: number, symbol: string): string {
   return `${symbol} ${price.toFixed(3)}`;
 }
 
-function SaleCard({ sale }: { sale: NFTSale }) {
+function SaleCard({ sale, isWhaleSale }: { sale: NFTSale; isWhaleSale?: boolean }) {
   const config = CHAIN_CONFIG[sale.chain] || CHAIN_CONFIG.ethereum;
   const [imgError, setImgError] = useState(false);
   const [imgIndex, setImgIndex] = useState(0);
@@ -63,10 +63,14 @@ function SaleCard({ sale }: { sale: NFTSale }) {
       className="animate-in fade-in slide-in-from-top-4 duration-500"
       style={{
         background: 'rgba(18, 18, 26, 0.95)',
-        border: `1px solid ${config.color}33`,
+        border: isWhaleSale ? '2px solid rgba(255, 200, 50, 0.7)' : `1px solid ${config.color}33`,
         borderRadius: 10,
         overflow: 'hidden',
         marginBottom: 10,
+        boxShadow: isWhaleSale
+          ? '0 0 12px rgba(255, 200, 50, 0.4), 0 0 30px rgba(255, 180, 0, 0.2), inset 0 0 12px rgba(255, 200, 50, 0.05)'
+          : 'none',
+        animation: isWhaleSale ? 'whale-card-glow 2s ease-in-out infinite alternate' : undefined,
       }}
     >
       {/* Image */}
@@ -200,6 +204,7 @@ const NFTLiveView = () => {
   const mutedRef = useRef(false);
   const [showChart, setShowChart] = useState(false);
   const [whaleFlash, setWhaleFlash] = useState(false);
+  const [whaleIds, setWhaleIds] = useState<Set<string>>(new Set());
   const [whaleSwim, setWhaleSwim] = useState<false | 'left' | 'right'>(false);
   const whaleSwimRef = useRef(false);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -278,6 +283,7 @@ const NFTLiveView = () => {
 
     // Play sound based on value
     if (isWhale(sale.price, sale.currency)) {
+      setWhaleIds(prev => new Set([...prev, sale.id]));
       playWhaleAlert();
       setWhaleFlash(true);
       setTimeout(() => setWhaleFlash(false), 2000);
@@ -494,7 +500,7 @@ const NFTLiveView = () => {
                   </div>
                 )}
                 {sales.map((sale, idx) => (
-                  <SaleCard key={`${sale.id}-${sale.timestamp}-${idx}`} sale={sale} />
+                  <SaleCard key={`${sale.id}-${sale.timestamp}-${idx}`} sale={sale} isWhaleSale={whaleIds.has(sale.id)} />
                 ))}
               </div>
             </div>
@@ -543,6 +549,10 @@ const NFTLiveView = () => {
             @keyframes whale-swim-right-to-left {
               0% { transform: translate(0, 0); }
               100% { transform: translate(calc(-100vw - 640px), calc(-100vh - 320px)); }
+            }
+            @keyframes whale-card-glow {
+              0% { box-shadow: 0 0 12px rgba(255, 200, 50, 0.4), 0 0 30px rgba(255, 180, 0, 0.2); }
+              100% { box-shadow: 0 0 18px rgba(255, 200, 50, 0.6), 0 0 40px rgba(255, 180, 0, 0.35); }
             }
             }
           `}</style>
