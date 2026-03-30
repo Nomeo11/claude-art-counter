@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNFTSales, type NFTSale } from '@/hooks/useNFTSales';
 import { Volume2, VolumeX } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
+import PriceTicker from './PriceTicker';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -309,6 +310,8 @@ const NFTLiveView = () => {
           {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
         </div>
       </div>
+
+      <PriceTicker />
 
       {/* 3-column grid */}
       <div style={{
