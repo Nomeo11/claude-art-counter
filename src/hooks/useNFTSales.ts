@@ -65,6 +65,15 @@ async function fetchSales(): Promise<NFTSale[]> {
   }
 }
 
+function limitInitialBatch(sales: NFTSale[]): NFTSale[] {
+  // On first poll, only show a few per chain to avoid a massive catch-up flood
+  const counts: Record<string, number> = {};
+  return sales.filter(s => {
+    counts[s.chain] = (counts[s.chain] || 0) + 1;
+    return counts[s.chain] <= INITIAL_MAX_PER_CHAIN;
+  });
+}
+
 export function useNFTSales(onSale: SaleCallback) {
   const onSaleRef = useRef(onSale);
   onSaleRef.current = onSale;
