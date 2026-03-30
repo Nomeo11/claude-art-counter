@@ -100,19 +100,31 @@ async function fetchEthLiveTransfers(): Promise<any[]> {
     });
     const metas = await Promise.all(metaPromises);
 
-    // Known marketplace router contracts
+    // Known marketplace router contracts (includes multiple versions)
     const MARKETPLACE_MAP: Record<string, string> = {
+      // OpenSea Seaport versions
       '0x00000000000000adc04c56bf30ac9d3c0aaf14dc': 'OPENSEA',
       '0x00000000006c3852cbef3e08e8df289169ede581': 'OPENSEA',
       '0x0000000000000068f116a894984e2db1123eb395': 'OPENSEA',
+      '0x00000000000001ad428e4906ae43d8f9852d0dd6': 'OPENSEA',
+      '0x0000000000000ad24e80fd803c6ac37206a95221': 'OPENSEA',
+      // Blur
       '0x39da41747a83aee658334415666f3ef92dd0d541': 'BLUR',
       '0xb2ecfe4e4d61f8790bbb9de2d1259b9e2410cea5': 'BLUR',
       '0x29469395eaf6f95920e59f858042f0e28d98a20b': 'BLUR',
+      '0x000000000000ad05ccc4f10045630fb830b95127': 'BLUR',
+      // X2Y2
       '0x74312363e45dcaba76c59ec49a7aa8a65a67eed3': 'X2Y2',
+      // LooksRare
       '0x59728544b08ab483533076417fbbb2fd0b17556a': 'LOOKSRARE',
       '0x0000000000e655fae4d56241588680f86e3b2377': 'LOOKSRARE',
+      // Sudoswap
       '0x2b2e8cda09bba9660dca5cb6233787738ad68329': 'SUDOSWAP',
+      // Magic Eden
       '0xa020d57ab0448ef74115c112d18a9c231cc86000': 'MAGIC EDEN',
+      // Gem (OpenSea aggregator)
+      '0x0000000035634b55f3d99b071b5a354f48e10bef': 'OPENSEA',
+      '0x83c8f28c26bf6aaca652df1dbbe0e1b56f8baba2': 'OPENSEA',
     };
 
     return paidTransfers.map((t: any, i: number) => {
@@ -126,7 +138,17 @@ async function fetchEthLiveTransfers(): Promise<any[]> {
       const timestamp = t.metadata?.blockTimestamp || '';
 
       const toAddr = tx?.to?.toLowerCase() || '';
-      const marketplace = MARKETPLACE_MAP[toAddr] || 'ETHEREUM';
+      // Check direct match, then check if input data starts with known selectors
+      let marketplace = MARKETPLACE_MAP[toAddr] || '';
+      if (!marketplace) {
+        const input = (tx?.input || '').slice(0, 10).toLowerCase();
+        // Seaport fulfillBasicOrder / fulfillOrder / matchOrders
+        if (['0xfb0f3ee1', '0xe7acab24', '0xa8174404', '0x87201b41'].includes(input)) {
+          marketplace = 'OPENSEA';
+        } else {
+          marketplace = 'NFT SALE';
+        }
+      }
 
       return {
         id: `eth-live-${t.uniqueId}`,
