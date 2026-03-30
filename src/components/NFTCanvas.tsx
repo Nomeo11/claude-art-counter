@@ -18,6 +18,20 @@ const CHAIN_CONFIG: Record<string, { label: string; color: string; symbol: strin
   tezos:    { label: 'TEZOS',    color: '#2C7DF7', symbol: 'ꜩ', glow: 'rgba(44,125,247,0.3)' },
 };
 
+// Approximate USD prices for whale detection ($1000+)
+const USD_PRICES: Record<string, number> = {
+  ETH: 2050,
+  SOL: 145,
+  XTZ: 0.85,
+  MATIC: 0.55,
+  USD: 1,
+};
+
+function isWhale(price: number, currency: string): boolean {
+  const usdRate = USD_PRICES[currency] || 1;
+  return price * usdRate >= 1000;
+}
+
 function formatPrice(price: number, symbol: string): string {
   if (price < 0.01) return `${symbol} ${price.toFixed(4)}`;
   if (price >= 100) return `${symbol} ${price.toFixed(0)}`;
