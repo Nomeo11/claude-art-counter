@@ -285,6 +285,7 @@ const NFTLiveView = () => {
     // Play sound based on value
     if (isWhale(sale.price, sale.currency)) {
       setWhaleIds(prev => new Set([...prev, sale.id]));
+      setWhaleSales(prev => [sale, ...prev].slice(0, 10));
       playWhaleAlert();
       setWhaleFlash(true);
       setTimeout(() => setWhaleFlash(false), 2000);
