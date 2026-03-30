@@ -359,6 +359,25 @@ const NFTLiveView = () => {
           <span style={{ fontFamily: '"Space Mono", monospace', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: 1 }}>
             LIVE SALES
           </span>
+          <span style={{
+            fontSize: 18,
+            transition: 'all 0.3s',
+            ...(whaleFlash ? {
+              color: '#00ff88',
+              textShadow: '0 0 12px rgba(0,255,136,0.8), 0 0 24px rgba(0,255,136,0.4)',
+              animation: 'whale-flash 0.4s ease-in-out 4',
+            } : {
+              color: 'rgba(255,255,255,0.2)',
+            }),
+          }}>
+            🐋
+          </span>
+          <style>{`
+            @keyframes whale-flash {
+              0%, 100% { opacity: 1; transform: scale(1); }
+              50% { opacity: 0.4; transform: scale(1.3); }
+            }
+          `}</style>
         </div>
         <div
           style={{ cursor: 'pointer', color: muted ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.6)', transition: 'color 0.2s' }}
