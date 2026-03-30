@@ -528,7 +528,7 @@ const NFTLiveView = () => {
       {/* Chart overlay */}
       {showChart && <LiveSalesChart stats={stats} onClose={() => setShowChart(false)} />}
 
-      {/* Countdown overlay */}
+        {/* Countdown overlay — Curious Cadence themed */}
       {countdown !== null && (
         <div style={{
           position: 'absolute',
@@ -537,41 +537,76 @@ const NFTLiveView = () => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'rgba(8,8,12,0.9)',
+          background: 'radial-gradient(ellipse at center, rgba(20,20,30,0.95) 0%, rgba(8,8,12,0.98) 70%)',
           zIndex: 20,
           pointerEvents: 'none',
+          gap: 28,
         }}>
-          {/* Pulsing ring */}
+          {/* Logo */}
+          <img src={logoImg} alt="Curious Cadence" style={{ width: 72, height: 72, borderRadius: 12, marginBottom: 8, boxShadow: '0 0 30px rgba(255,140,0,0.3)' }} />
+
+          {/* Title */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontFamily: '"Space Mono", monospace', fontSize: 28, fontWeight: 700, color: '#fff', letterSpacing: 3 }}>
+              ON CHAIN TOKEN
+            </div>
+            <div style={{ fontFamily: '"Space Mono", monospace', fontSize: 16, fontWeight: 700, color: '#FF8C00', letterSpacing: 5, marginTop: 4 }}>
+              LIVE SALES
+            </div>
+          </div>
+
+          {/* Chain boxes */}
+          <div style={{ display: 'flex', gap: 24 }}>
+            {CHAIN_ORDER.map(chain => {
+              const cfg = CHAIN_CONFIG[chain];
+              return (
+                <div key={chain} style={{
+                  border: '1px solid rgba(255,140,0,0.35)',
+                  borderRadius: 10,
+                  padding: '16px 28px',
+                  textAlign: 'center',
+                  background: 'rgba(255,140,0,0.04)',
+                  minWidth: 120,
+                }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', letterSpacing: 2, marginBottom: 6 }}>{cfg.label}</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: '#FF8C00', letterSpacing: 1 }}>{cfg.label === 'ETHEREUM' ? 'ETH' : cfg.label === 'SOLANA' ? 'SOL' : 'XTZ'}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Countdown ring */}
           <div style={{
             position: 'relative',
-            width: 160,
-            height: 160,
+            width: 100,
+            height: 100,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            marginTop: 8,
           }}>
             <div style={{
               position: 'absolute',
               inset: 0,
               borderRadius: '50%',
-              border: '2px solid rgba(0,255,136,0.3)',
+              border: '2px solid rgba(255,140,0,0.3)',
               animation: 'countdown-ring-pulse 1s ease-in-out infinite',
             }} />
             <div style={{
               position: 'absolute',
-              inset: 10,
+              inset: 8,
               borderRadius: '50%',
-              border: '1px solid rgba(0,255,136,0.15)',
+              border: '1px solid rgba(255,140,0,0.15)',
               animation: 'countdown-ring-pulse 1s ease-in-out infinite 0.2s',
             }} />
             <div
               key={countdown}
               style={{
                 fontFamily: '"Space Mono", monospace',
-                fontSize: 80,
+                fontSize: 48,
                 fontWeight: 700,
-                color: '#00ff88',
-                textShadow: '0 0 40px rgba(0,255,136,0.6), 0 0 80px rgba(0,255,136,0.3), 0 0 120px rgba(0,255,136,0.1)',
+                color: '#FF8C00',
+                textShadow: '0 0 40px rgba(255,140,0,0.6), 0 0 80px rgba(255,140,0,0.3)',
                 lineHeight: 1,
                 animation: 'countdown-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
               }}
@@ -579,16 +614,18 @@ const NFTLiveView = () => {
               {countdown}
             </div>
           </div>
+
           <div style={{
             fontFamily: '"Space Mono", monospace',
-            fontSize: 12,
-            color: 'rgba(255,255,255,0.4)',
+            fontSize: 10,
+            color: '#FF8C00',
             letterSpacing: 4,
-            marginTop: 24,
             textTransform: 'uppercase',
+            opacity: 0.7,
           }}>
-            Going live
+            Real-time Data Replication
           </div>
+
           <style>{`
             @keyframes countdown-pop {
               0% { transform: scale(2); opacity: 0; }
