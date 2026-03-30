@@ -386,6 +386,8 @@ const NFTLiveView = () => {
               flexDirection: 'column',
               borderRight: chain !== 'tezos' ? '1px solid rgba(255,255,255,0.06)' : 'none',
               minHeight: 0,
+              minWidth: 0,
+              overflow: 'hidden',
             }}>
               {/* Column header */}
               <div style={{
