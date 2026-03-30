@@ -238,9 +238,10 @@ const NFTLiveView = () => {
     }, 3000);
   }, []);
 
-  const playSalePing = useCallback(() => {
+  const playSalePing = useCallback((chain?: string) => {
     if (mutedRef.current) return;
-    const audio = new Audio('/sounds/sale-ping.wav');
+    const src = chain === 'tezos' ? '/sounds/tezos-sale.wav' : '/sounds/sale-ping.wav';
+    const audio = new Audio(src);
     audio.volume = 0.15;
     audio.play().catch(() => {});
   }, []);
@@ -259,7 +260,7 @@ const NFTLiveView = () => {
     if (isWhale(sale.price, sale.currency)) {
       playWhaleAlert();
     } else {
-      playSalePing();
+      playSalePing(chain);
     }
 
     requestAnimationFrame(() => {
