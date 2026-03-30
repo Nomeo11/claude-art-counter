@@ -82,7 +82,7 @@ export function useNFTSales(onSale: SaleCallback) {
       intervalRef.current = setTimeout(async () => {
         await poll();
         schedule();
-      }, 10000);
+      }, 3000);
     }
     schedule();
 
