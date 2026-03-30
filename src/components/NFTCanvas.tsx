@@ -260,7 +260,7 @@ const NFTLiveView = () => {
     if (isWhale(sale.price, sale.currency)) {
       playWhaleAlert();
     } else {
-      playSalePing();
+      playSalePing(chain);
     }
 
     requestAnimationFrame(() => {
