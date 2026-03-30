@@ -6,10 +6,10 @@ const corsHeaders = {
 };
 
 const IPFS_GATEWAYS = [
-  'https://cloudflare-ipfs.com/ipfs/',
   'https://nftstorage.link/ipfs/',
-  'https://gateway.pinata.cloud/ipfs/',
   'https://dweb.link/ipfs/',
+  'https://w3s.link/ipfs/',
+  'https://gateway.pinata.cloud/ipfs/',
   'https://ipfs.io/ipfs/',
 ];
 
@@ -18,13 +18,79 @@ function getIpfsUrls(originalUrl: string): string[] {
   const ipfsSchemeMatch = normalizedUrl.match(/^ipfs:\/\/(?:ipfs\/)?(.+)$/i);
   if (ipfsSchemeMatch) {
     const cid = ipfsSchemeMatch[1];
-    return IPFS_GATEWAYS.map(gw => `${gw}${cid}`);
+    return IPFS_GATEWAYS.map((gw) => `${gw}${cid}`);
   }
 
   const ipfsPathMatch = normalizedUrl.match(/\/ipfs\/(.+)$/i);
   if (!ipfsPathMatch) return [normalizedUrl];
   const cid = ipfsPathMatch[1];
-  return IPFS_GATEWAYS.map(gw => `${gw}${cid}`);
+  return IPFS_GATEWAYS.map((gw) => `${gw}${cid}`);
+}
+
+function normalizeContentType(contentType: string | null): string {
+  return contentType?.split(';')[0]?.trim().toLowerCase() || '';
+}
+
+function sniffMimeType(body: Uint8Array): string | null {
+  if (body.length >= 3 && body[0] === 0xff && body[1] === 0xd8 && body[2] === 0xff) {
+    return 'image/jpeg';
+  }
+
+  if (
+    body.length >= 8 &&
+    body[0] === 0x89 &&
+    body[1] === 0x50 &&
+    body[2] === 0x4e &&
+    body[3] === 0x47 &&
+    body[4] === 0x0d &&
+    body[5] === 0x0a &&
+    body[6] === 0x1a &&
+    body[7] === 0x0a
+  ) {
+    return 'image/png';
+  }
+
+  if (
+    body.length >= 6 &&
+    body[0] === 0x47 &&
+    body[1] === 0x49 &&
+    body[2] === 0x46 &&
+    body[3] === 0x38 &&
+    (body[4] === 0x37 || body[4] === 0x39) &&
+    body[5] === 0x61
+  ) {
+    return 'image/gif';
+  }
+
+  if (
+    body.length >= 12 &&
+    body[0] === 0x52 &&
+    body[1] === 0x49 &&
+    body[2] === 0x46 &&
+    body[3] === 0x46 &&
+    body[8] === 0x57 &&
+    body[9] === 0x45 &&
+    body[10] === 0x42 &&
+    body[11] === 0x50
+  ) {
+    return 'image/webp';
+  }
+
+  if (
+    body.length >= 12 &&
+    body[4] === 0x66 &&
+    body[5] === 0x74 &&
+    body[6] === 0x79 &&
+    body[7] === 0x70
+  ) {
+    return 'video/mp4';
+  }
+
+  return null;
+}
+
+function isRenderableMediaType(contentType: string): boolean {
+  return contentType.startsWith('image/') || contentType.startsWith('video/');
 }
 
 async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
@@ -32,7 +98,7 @@ async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Respons
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
-      headers: { 'Accept': 'image/*' },
+      headers: { Accept: 'image/*,video/*,*/*;q=0.8' },
       signal: controller.signal,
     });
     clearTimeout(timer);
@@ -60,29 +126,33 @@ serve(async (req) => {
 
     for (const tryUrl of urls) {
       try {
-        const res = await fetchWithTimeout(tryUrl, 2000);
-        if (res.ok) {
-          const contentType = res.headers.get('content-type') || 'image/png';
-          // Reject non-image content (HTML pages, videos, etc.)
-          if (!contentType.startsWith('image/') && !contentType.startsWith('application/octet-stream')) {
-            await res.arrayBuffer(); // consume body
-            continue;
-          }
-          const body = await res.arrayBuffer();
-          // Reject suspiciously small responses (likely error pages)
-          if (body.byteLength < 100) {
-            continue;
-          }
-          return new Response(body, {
-            headers: {
-              ...corsHeaders,
-              'Content-Type': contentType,
-              'Cache-Control': 'public, max-age=86400',
-            },
-          });
+        const res = await fetchWithTimeout(tryUrl, 4500);
+        if (!res.ok) {
+          await res.arrayBuffer().catch(() => null);
+          continue;
         }
-        // consume body to avoid leak
-        await res.text();
+
+        const body = new Uint8Array(await res.arrayBuffer());
+        if (body.byteLength === 0) continue;
+
+        const headerType = normalizeContentType(res.headers.get('content-type'));
+        const sniffedType = sniffMimeType(body);
+        const contentType =
+          headerType && headerType !== 'application/octet-stream'
+            ? headerType
+            : sniffedType || headerType || 'application/octet-stream';
+
+        if (!isRenderableMediaType(contentType)) {
+          continue;
+        }
+
+        return new Response(body, {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=86400',
+          },
+        });
       } catch {
         // try next gateway
       }

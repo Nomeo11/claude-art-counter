@@ -30,6 +30,7 @@ function SaleCard({ sale }: { sale: NFTSale }) {
   const [imgIndex, setImgIndex] = useState(0);
   const imageCandidates = sale.imageCandidates?.length ? sale.imageCandidates : sale.image ? [sale.image] : [];
   const activeImage = imageCandidates[imgIndex] || '';
+  const isVideo = imgIndex === 0 && sale.mediaType?.startsWith('video/');
 
   const handleImageError = () => {
     if (imgIndex < imageCandidates.length - 1) {
@@ -54,19 +55,38 @@ function SaleCard({ sale }: { sale: NFTSale }) {
       {/* Image */}
       <div style={{ width: '100%', aspectRatio: '1 / 1', background: 'rgba(35,35,50,0.8)', position: 'relative', overflow: 'hidden' }}>
         {activeImage && !imgError ? (
-          <img
-            src={proxyImageUrl(activeImage)}
-            alt={sale.collection}
-            onError={handleImageError}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              display: 'block',
-              background: '#15151f',
-            }}
-            loading="lazy"
-          />
+          isVideo ? (
+            <video
+              src={proxyImageUrl(activeImage)}
+              onError={handleImageError}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                display: 'block',
+                background: '#15151f',
+              }}
+            />
+          ) : (
+            <img
+              src={proxyImageUrl(activeImage)}
+              alt={sale.collection}
+              onError={handleImageError}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                display: 'block',
+                background: '#15151f',
+              }}
+              loading="lazy"
+            />
+          )
         ) : (
           <div style={{
             width: '100%',
@@ -78,7 +98,7 @@ function SaleCard({ sale }: { sale: NFTSale }) {
             fontFamily: '"Space Mono", monospace',
             fontSize: 10,
           }}>
-            No image
+            No media
           </div>
         )}
       </div>
