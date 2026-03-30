@@ -18,11 +18,12 @@ export interface NFTSale {
 type SaleCallback = (sale: NFTSale) => void;
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const seenIds = new Set<string>();
+const seenIds = new Map<string, number>(); // id -> timestamp
 let pollCount = 0;
 let isFirstPoll = true;
-const RARIBLE_INTERVAL = 10; // include Rarible every 10th poll (10 * 3s = 30s)
-const INITIAL_MAX_PER_CHAIN = 2; // limit catch-up on first load
+const RARIBLE_INTERVAL = 10;
+const INITIAL_MAX_PER_CHAIN = 2;
+const SEEN_TTL = 90_000; // forget seen IDs after 90s so feed stays alive
 
 async function fetchSales(): Promise<NFTSale[]> {
   try {
