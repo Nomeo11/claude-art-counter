@@ -126,7 +126,7 @@ serve(async (req) => {
 
     for (const tryUrl of urls) {
       try {
-        const res = await fetchWithTimeout(tryUrl, 4500);
+        const res = await fetchWithTimeout(tryUrl, 8000);
         if (!res.ok) {
           await res.arrayBuffer().catch(() => null);
           continue;

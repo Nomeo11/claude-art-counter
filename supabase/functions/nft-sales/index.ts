@@ -34,10 +34,11 @@ function normalizeTezosMediaUrl(url?: string): string {
 }
 
 function getTezosImageCandidates(token: any): string[] {
+  // Prefer display_uri (smaller/web-optimized) then thumbnail, then artifact (can be huge GIFs)
   return Array.from(new Set([
-    normalizeTezosMediaUrl(token?.artifact_uri),
-    normalizeTezosMediaUrl(token?.thumbnail_uri),
     normalizeTezosMediaUrl(token?.display_uri),
+    normalizeTezosMediaUrl(token?.thumbnail_uri),
+    normalizeTezosMediaUrl(token?.artifact_uri),
   ].filter(Boolean)));
 }
 
