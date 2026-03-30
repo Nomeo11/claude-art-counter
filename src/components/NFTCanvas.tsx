@@ -198,6 +198,7 @@ const NFTLiveView = () => {
   const colRefs = useRef<Record<string, HTMLDivElement | null>>({ ethereum: null, solana: null, tezos: null });
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
+  const [showChart, setShowChart] = useState(false);
   const [whaleFlash, setWhaleFlash] = useState(false);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const ambientAudioRef = useRef<HTMLAudioElement | null>(null);
