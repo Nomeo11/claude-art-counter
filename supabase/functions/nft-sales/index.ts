@@ -41,7 +41,7 @@ function getTezosImageCandidates(token: any): string[] {
 async function fetchReservoirSales(): Promise<any[]> {
   try {
     const res = await fetch(`${RESERVOIR_BASE}/sales/v6?limit=15&sortBy=time&sortDirection=desc`, {
-      headers: { Accept: 'application/json', 'x-api-key': 'demo-api-key' },
+      headers: { Accept: 'application/json' },
     });
     if (!res.ok) { console.error('Reservoir', res.status, await res.text().catch(() => '')); return []; }
     const data = await res.json();
