@@ -1,5 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNFTSales, type NFTSale } from '@/hooks/useNFTSales';
+import { Volume2, VolumeX } from 'lucide-react';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -122,6 +123,12 @@ function SaleCard({ sale }: { sale: NFTSale }) {
   );
 }
 
+const CHAIN_SOUNDS: Record<string, string> = {
+  ethereum: '/sounds/eth-sale.wav',
+  solana: '/sounds/sol-sale.wav',
+  tezos: '/sounds/tez-sale.wav',
+};
+
 const NFTLiveView = () => {
   const [columns, setColumns] = useState<Record<string, NFTSale[]>>({
     ethereum: [],
@@ -131,23 +138,48 @@ const NFTLiveView = () => {
   const statsRef = useRef<Record<string, number>>({ ethereum: 0, solana: 0, tezos: 0 });
   const [stats, setStats] = useState<Record<string, number>>({ ethereum: 0, solana: 0, tezos: 0 });
   const colRefs = useRef<Record<string, HTMLDivElement | null>>({ ethereum: null, solana: null, tezos: null });
+  const [muted, setMuted] = useState(false);
+  const mutedRef = useRef(false);
+  const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
+
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
+
+  useEffect(() => {
+    for (const [chain, src] of Object.entries(CHAIN_SOUNDS)) {
+      const audio = new Audio(src);
+      audio.volume = 0.5;
+      audioRefs.current[chain] = audio;
+    }
+  }, []);
+
+  const playSound = useCallback((chain: string) => {
+    if (mutedRef.current) return;
+    const audio = audioRefs.current[chain];
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    }
+  }, []);
 
   const handleSale = useCallback((sale: NFTSale) => {
     const chain = CHAIN_ORDER.includes(sale.chain as any) ? sale.chain : 'ethereum';
     statsRef.current[chain] = (statsRef.current[chain] || 0) + 1;
 
     setColumns(prev => {
-      const col = [sale, ...prev[chain]].slice(0, 50); // newest first, cap at 50
+      const col = [sale, ...prev[chain]].slice(0, 50);
       return { ...prev, [chain]: col };
     });
     setStats({ ...statsRef.current });
 
-    // Auto-scroll to top when new sale arrives
+    playSound(chain);
+
     requestAnimationFrame(() => {
       const el = colRefs.current[chain];
       if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
     });
-  }, []);
+  }, [playSound]);
 
   useNFTSales(handleSale);
 
@@ -163,6 +195,19 @@ const NFTLiveView = () => {
       fontFamily: '"Space Mono", monospace',
       overflow: 'hidden',
     }}>
+      {/* Mute toggle */}
+      <div style={{
+        position: 'absolute',
+        top: 10,
+        right: 14,
+        zIndex: 10,
+        cursor: 'pointer',
+        color: muted ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.6)',
+        transition: 'color 0.2s',
+      }} onClick={() => setMuted(m => !m)}>
+        {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+      </div>
+
       {/* 3-column grid */}
       <div style={{
         flex: 1,
