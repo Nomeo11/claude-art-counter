@@ -295,6 +295,17 @@ const NFTLiveView = () => {
     }
   }, [countdown]);
 
+  // Start bg music only after countdown ends
+  useEffect(() => {
+    if (countdown === null && !bgAudioRef.current) {
+      const bgAudio = new Audio('/sounds/bg-loop.wav');
+      bgAudio.loop = true;
+      bgAudio.volume = 0.35;
+      bgAudioRef.current = bgAudio;
+      if (!mutedRef.current) bgAudio.play().catch(() => {});
+    }
+  }, [countdown]);
+
   const total = stats.ethereum + stats.solana + stats.tezos;
 
   return (
