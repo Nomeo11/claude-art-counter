@@ -192,6 +192,11 @@ const RARIBLE_CACHE_TTL = 30_000; // 30 seconds
 async function fetchRaribleSales(): Promise<any[]> {
   const apiKey = Deno.env.get('RARIBLE_API_KEY');
   if (!apiKey) return [];
+  
+  // Return cached data if fresh
+  if (Date.now() - raribleCache.ts < RARIBLE_CACHE_TTL && raribleCache.data.length > 0) {
+    return raribleCache.data;
+  }
 
   try {
     const referer = 'https://id-preview--e22f2454-77fb-4983-b775-a8c59b148c89.lovable.app';
