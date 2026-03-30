@@ -301,7 +301,7 @@ const NFTLiveView = () => {
     });
   }, [playWhaleAlert, playSalePing]);
 
-  const { countdown } = useNFTSales(handleSale);
+  const { countdown, waitingForGo, startCountdown } = useNFTSales(handleSale);
   const countdownAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
