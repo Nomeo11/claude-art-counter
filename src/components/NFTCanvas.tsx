@@ -195,6 +195,19 @@ const NFTLiveView = () => {
       fontFamily: '"Space Mono", monospace',
       overflow: 'hidden',
     }}>
+      {/* Mute toggle */}
+      <div style={{
+        position: 'absolute',
+        top: 10,
+        right: 14,
+        zIndex: 10,
+        cursor: 'pointer',
+        color: muted ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.6)',
+        transition: 'color 0.2s',
+      }} onClick={() => setMuted(m => !m)}>
+        {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+      </div>
+
       {/* 3-column grid */}
       <div style={{
         flex: 1,
