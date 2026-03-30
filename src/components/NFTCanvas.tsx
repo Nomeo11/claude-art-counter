@@ -435,7 +435,7 @@ const NFTLiveView = () => {
               position: 'absolute',
               inset: 10,
               borderRadius: '50%',
-              border: '1px solid rgba(0,255,136,0.15)',
+              border: '1px solid rgba(255,160,0,0.15)',
               animation: 'countdown-ring-pulse 1s ease-in-out infinite 0.2s',
             }} />
             <div
