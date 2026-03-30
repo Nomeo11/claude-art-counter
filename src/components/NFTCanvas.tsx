@@ -390,30 +390,69 @@ const NFTLiveView = () => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'rgba(8,8,12,0.85)',
+          background: 'rgba(8,8,12,0.9)',
           zIndex: 20,
           pointerEvents: 'none',
         }}>
+          {/* Pulsing ring */}
+          <div style={{
+            position: 'relative',
+            width: 160,
+            height: 160,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '50%',
+              border: '2px solid rgba(0,255,136,0.3)',
+              animation: 'countdown-ring-pulse 1s ease-in-out infinite',
+            }} />
+            <div style={{
+              position: 'absolute',
+              inset: 10,
+              borderRadius: '50%',
+              border: '1px solid rgba(0,255,136,0.15)',
+              animation: 'countdown-ring-pulse 1s ease-in-out infinite 0.2s',
+            }} />
+            <div
+              key={countdown}
+              style={{
+                fontFamily: '"Space Mono", monospace',
+                fontSize: 80,
+                fontWeight: 700,
+                color: '#00ff88',
+                textShadow: '0 0 40px rgba(0,255,136,0.6), 0 0 80px rgba(0,255,136,0.3), 0 0 120px rgba(0,255,136,0.1)',
+                lineHeight: 1,
+                animation: 'countdown-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              }}
+            >
+              {countdown}
+            </div>
+          </div>
           <div style={{
             fontFamily: '"Space Mono", monospace',
-            fontSize: 14,
-            color: 'rgba(255,255,255,0.5)',
-            letterSpacing: 2,
-            marginBottom: 12,
+            fontSize: 12,
+            color: 'rgba(255,255,255,0.4)',
+            letterSpacing: 4,
+            marginTop: 24,
             textTransform: 'uppercase',
           }}>
-            Going live in
+            Going live
           </div>
-          <div style={{
-            fontFamily: '"Space Mono", monospace',
-            fontSize: 72,
-            fontWeight: 700,
-            color: '#00ff88',
-            textShadow: '0 0 30px rgba(0,255,136,0.4), 0 0 60px rgba(0,255,136,0.2)',
-            lineHeight: 1,
-          }}>
-            {countdown}
-          </div>
+          <style>{`
+            @keyframes countdown-pop {
+              0% { transform: scale(2); opacity: 0; }
+              50% { opacity: 1; }
+              100% { transform: scale(1); opacity: 1; }
+            }
+            @keyframes countdown-ring-pulse {
+              0%, 100% { transform: scale(1); opacity: 0.5; }
+              50% { transform: scale(1.1); opacity: 1; }
+            }
+          `}</style>
         </div>
       )}
 
