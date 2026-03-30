@@ -95,28 +95,31 @@ export function useNFTSales(onSale: SaleCallback) {
   }, []);
 
   useEffect(() => {
-    // First poll: show initial batch, then countdown before going live
-    poll().then(() => {
-      setCountdown(COUNTDOWN_SECONDS);
-      let remaining = COUNTDOWN_SECONDS;
-      countdownRef.current = setInterval(() => {
-        remaining--;
-        setCountdown(remaining);
-        if (remaining <= 0) {
-          clearInterval(countdownRef.current);
-          setCountdown(null);
-          // Start live polling
-          function schedule() {
-            intervalRef.current = setTimeout(async () => {
-              await poll();
-              schedule();
-            }, 3000);
-          }
-          poll();
-          schedule();
+    // Start countdown IMMEDIATELY, fetch sales in background
+    setCountdown(COUNTDOWN_SECONDS);
+    let remaining = COUNTDOWN_SECONDS;
+
+    // Fetch initial batch in background (don't block countdown)
+    poll();
+
+    countdownRef.current = setInterval(() => {
+      remaining--;
+      setCountdown(remaining);
+      if (remaining <= 0) {
+        clearInterval(countdownRef.current);
+        setCountdown(null);
+        // Start live polling
+        function schedule() {
+          intervalRef.current = setTimeout(async () => {
+            await poll();
+            schedule();
+          }, 3000);
         }
-      }, 1000);
-    });
+        poll();
+        schedule();
+      }
+    }, 1000);
+
 
     return () => {
       clearTimeout(intervalRef.current);
