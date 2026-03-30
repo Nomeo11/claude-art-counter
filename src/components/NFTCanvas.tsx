@@ -198,20 +198,32 @@ const NFTLiveView = () => {
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ambientAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ambientTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     mutedRef.current = muted;
     if (bgAudioRef.current) {
       bgAudioRef.current.muted = muted;
     }
+    if (ambientAudioRef.current) {
+      ambientAudioRef.current.muted = muted;
+    }
   }, [muted]);
 
-  // Cleanup bg audio on unmount
+  // Cleanup audio on unmount
   useEffect(() => {
     return () => {
       if (bgAudioRef.current) {
         bgAudioRef.current.pause();
         bgAudioRef.current = null;
+      }
+      if (ambientAudioRef.current) {
+        ambientAudioRef.current.pause();
+        ambientAudioRef.current = null;
+      }
+      if (ambientTimerRef.current) {
+        clearTimeout(ambientTimerRef.current);
       }
     };
   }, []);
@@ -300,9 +312,21 @@ const NFTLiveView = () => {
     if (countdown === null && !bgAudioRef.current) {
       const bgAudio = new Audio('/sounds/bg-loop.wav');
       bgAudio.loop = true;
-      bgAudio.volume = 0.35;
+      bgAudio.volume = 0.28;
       bgAudioRef.current = bgAudio;
       if (!mutedRef.current) bgAudio.play().catch(() => {});
+
+      // Start ambient texture ~15s after sales begin
+      ambientTimerRef.current = setTimeout(() => {
+        if (!ambientAudioRef.current) {
+          const ambient = new Audio('/sounds/ambient-texture.wav');
+          ambient.loop = true;
+          ambient.volume = 0.12;
+          ambient.muted = mutedRef.current;
+          ambientAudioRef.current = ambient;
+          ambient.play().catch(() => {});
+        }
+      }, 15000);
     }
   }, [countdown]);
 
