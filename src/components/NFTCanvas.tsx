@@ -438,6 +438,46 @@ const NFTLiveView = () => {
         </div>
       </div>
 
+      {/* Whale thumbnails bar */}
+      {whaleSales.length > 0 && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '5px 14px',
+          borderBottom: '1px solid rgba(255,200,50,0.1)',
+          background: 'rgba(255,200,50,0.03)',
+          overflow: 'hidden',
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 12, marginRight: 2, flexShrink: 0 }}>🐋</span>
+          {whaleSales.map((ws) => {
+            const img = ws.imageCandidates?.[0] || ws.image || '';
+            return (
+              <div key={ws.id} style={{
+                width: 32,
+                height: 32,
+                borderRadius: 6,
+                overflow: 'hidden',
+                flexShrink: 0,
+                border: '1.5px solid rgba(255, 200, 50, 0.6)',
+                boxShadow: '0 0 8px rgba(255, 200, 50, 0.3), 0 0 16px rgba(255, 180, 0, 0.15)',
+                animation: 'whale-card-glow 2s ease-in-out infinite alternate',
+                background: '#15151f',
+              }}>
+                {img && (
+                  <img
+                    src={proxyImageUrl(img)}
+                    alt={ws.collection}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <PriceTicker />
 
       {/* 3-column grid */}
