@@ -138,7 +138,7 @@ function SaleCard({ sale }: { sale: NFTSale }) {
         {sale.artist && (
           <div style={{
             fontFamily: '"Space Mono", monospace',
-            fontSize: 9,
+            fontSize: 11,
             color: config.color,
             opacity: 0.7,
             whiteSpace: 'nowrap',
