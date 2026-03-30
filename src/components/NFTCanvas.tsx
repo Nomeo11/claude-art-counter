@@ -381,11 +381,19 @@ const NFTLiveView = () => {
             }
           `}</style>
         </div>
-        <div
-          style={{ cursor: 'pointer', color: muted ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.6)', transition: 'color 0.2s' }}
-          onClick={() => setMuted(m => !m)}
-        >
-          {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{ cursor: 'pointer', color: showChart ? '#00ff88' : 'rgba(255,255,255,0.4)', transition: 'color 0.2s' }}
+            onClick={() => setShowChart(v => !v)}
+          >
+            <BarChart3 size={18} />
+          </div>
+          <div
+            style={{ cursor: 'pointer', color: muted ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.6)', transition: 'color 0.2s' }}
+            onClick={() => setMuted(m => !m)}
+          >
+            {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </div>
         </div>
       </div>
 
