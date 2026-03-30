@@ -61,9 +61,16 @@ export function useNFTSales(onSale: SaleCallback) {
 
   const poll = useCallback(async () => {
     const sales = await fetchSales();
-    // Drip-feed for visual effect
+    if (sales.length === 0) return;
+    // Spread sales across the polling window with random jitter
+    const windowMs = 7500; // slightly less than poll interval
+    const slots = sales.length;
     sales.forEach((sale, i) => {
-      setTimeout(() => onSaleRef.current(sale), i * 400);
+      // Base delay spread evenly + random jitter of ±30%
+      const baseDelay = (windowMs / slots) * i;
+      const jitter = (Math.random() - 0.5) * 0.6 * (windowMs / slots);
+      const delay = Math.max(0, baseDelay + jitter);
+      setTimeout(() => onSaleRef.current(sale), delay);
     });
   }, []);
 
