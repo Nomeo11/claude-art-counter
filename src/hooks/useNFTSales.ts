@@ -74,7 +74,7 @@ function limitInitialBatch(sales: NFTSale[]): NFTSale[] {
   });
 }
 
-const COUNTDOWN_SECONDS = 5;
+const COUNTDOWN_SECONDS = 10;
 
 export function useNFTSales(onSale: SaleCallback) {
   const onSaleRef = useRef(onSale);
