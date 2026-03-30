@@ -232,11 +232,10 @@ const NFTLiveView = () => {
     audio.volume = 0.4;
     whaleAudioRef.current = audio;
     audio.play().catch(() => {});
-    // Stop after 5 seconds
     setTimeout(() => {
       audio.pause();
       audio.currentTime = 0;
-    }, 5000);
+    }, 3000);
   }, []);
 
   const playSalePing = useCallback(() => {
