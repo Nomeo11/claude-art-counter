@@ -550,6 +550,10 @@ const NFTLiveView = () => {
               0% { transform: translate(0, 0); }
               100% { transform: translate(calc(-100vw - 640px), calc(-100vh - 320px)); }
             }
+            @keyframes whale-card-glow {
+              0% { box-shadow: 0 0 12px rgba(255, 200, 50, 0.4), 0 0 30px rgba(255, 180, 0, 0.2); }
+              100% { box-shadow: 0 0 18px rgba(255, 200, 50, 0.6), 0 0 40px rgba(255, 180, 0, 0.35); }
+            }
             }
           `}</style>
         </div>
