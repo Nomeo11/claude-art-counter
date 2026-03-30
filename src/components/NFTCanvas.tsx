@@ -29,7 +29,7 @@ const USD_PRICES: Record<string, number> = {
 
 function isWhale(price: number, currency: string): boolean {
   const usdRate = USD_PRICES[currency] || 1;
-  return price * usdRate >= 1000;
+  return price * usdRate >= 5000;
 }
 
 function formatPrice(price: number, symbol: string): string {
@@ -232,11 +232,10 @@ const NFTLiveView = () => {
     audio.volume = 0.4;
     whaleAudioRef.current = audio;
     audio.play().catch(() => {});
-    // Stop after 5 seconds
     setTimeout(() => {
       audio.pause();
       audio.currentTime = 0;
-    }, 5000);
+    }, 3000);
   }, []);
 
   const playSalePing = useCallback(() => {
