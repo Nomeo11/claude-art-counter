@@ -273,7 +273,7 @@ const NFTLiveView = () => {
     });
   }, [playWhaleAlert, playSalePing]);
 
-  useNFTSales(handleSale);
+  const { countdown } = useNFTSales(handleSale);
 
   const total = stats.ethereum + stats.solana + stats.tezos;
 
