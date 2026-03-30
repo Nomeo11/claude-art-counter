@@ -275,6 +275,27 @@ const NFTLiveView = () => {
   }, [playWhaleAlert, playSalePing]);
 
   const { countdown } = useNFTSales(handleSale);
+  const countdownAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (countdown !== null && countdown > 0) {
+      // Play countdown tick sound
+      if (countdownAudioRef.current) {
+        countdownAudioRef.current.pause();
+        countdownAudioRef.current.currentTime = 0;
+      }
+      const audio = new Audio('/sounds/countdown.wav');
+      audio.volume = 0.4;
+      countdownAudioRef.current = audio;
+      audio.play().catch(() => {});
+    }
+    if (countdown === 0 || countdown === null) {
+      if (countdownAudioRef.current) {
+        countdownAudioRef.current.pause();
+        countdownAudioRef.current = null;
+      }
+    }
+  }, [countdown]);
 
   const total = stats.ethereum + stats.solana + stats.tezos;
 
@@ -407,14 +428,14 @@ const NFTLiveView = () => {
               position: 'absolute',
               inset: 0,
               borderRadius: '50%',
-              border: '2px solid rgba(0,255,136,0.3)',
+              border: '2px solid rgba(255,160,0,0.3)',
               animation: 'countdown-ring-pulse 1s ease-in-out infinite',
             }} />
             <div style={{
               position: 'absolute',
               inset: 10,
               borderRadius: '50%',
-              border: '1px solid rgba(0,255,136,0.15)',
+              border: '1px solid rgba(255,160,0,0.15)',
               animation: 'countdown-ring-pulse 1s ease-in-out infinite 0.2s',
             }} />
             <div
@@ -423,8 +444,8 @@ const NFTLiveView = () => {
                 fontFamily: '"Space Mono", monospace',
                 fontSize: 80,
                 fontWeight: 700,
-                color: '#00ff88',
-                textShadow: '0 0 40px rgba(0,255,136,0.6), 0 0 80px rgba(0,255,136,0.3), 0 0 120px rgba(0,255,136,0.1)',
+                color: '#FFA000',
+                textShadow: '0 0 40px rgba(255,160,0,0.6), 0 0 80px rgba(255,160,0,0.3), 0 0 120px rgba(255,160,0,0.1)',
                 lineHeight: 1,
                 animation: 'countdown-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
               }}
