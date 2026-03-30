@@ -288,7 +288,7 @@ const NFTLiveView = () => {
         setTimeout(() => {
           setWhaleSwim(false);
           whaleSwimRef.current = false;
-        }, 3000);
+        }, 4500);
       }
     } else {
       playSalePing(chain);
