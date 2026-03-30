@@ -6,8 +6,8 @@ const corsHeaders = {
 };
 
 const IPFS_GATEWAYS = [
-  'https://cf-ipfs.com/ipfs/',
   'https://cloudflare-ipfs.com/ipfs/',
+  'https://nftstorage.link/ipfs/',
   'https://gateway.pinata.cloud/ipfs/',
   'https://dweb.link/ipfs/',
   'https://ipfs.io/ipfs/',
@@ -53,7 +53,7 @@ serve(async (req) => {
 
     for (const tryUrl of urls) {
       try {
-        const res = await fetchWithTimeout(tryUrl, 3000);
+        const res = await fetchWithTimeout(tryUrl, 5000);
         if (res.ok) {
           const contentType = res.headers.get('content-type') || 'image/png';
           const body = await res.arrayBuffer();
