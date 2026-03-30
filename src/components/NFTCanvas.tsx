@@ -27,6 +27,18 @@ function formatPrice(price: number, symbol: string): string {
 function SaleCard({ sale }: { sale: NFTSale }) {
   const config = CHAIN_CONFIG[sale.chain] || CHAIN_CONFIG.ethereum;
   const [imgError, setImgError] = useState(false);
+  const [imgIndex, setImgIndex] = useState(0);
+  const imageCandidates = sale.imageCandidates?.length ? sale.imageCandidates : sale.image ? [sale.image] : [];
+  const activeImage = imageCandidates[imgIndex] || '';
+
+  const handleImageError = () => {
+    if (imgIndex < imageCandidates.length - 1) {
+      setImgIndex((current) => current + 1);
+      return;
+    }
+
+    setImgError(true);
+  };
 
   return (
     <div
@@ -41,11 +53,11 @@ function SaleCard({ sale }: { sale: NFTSale }) {
     >
       {/* Image */}
       <div style={{ width: '100%', aspectRatio: '1 / 1', background: 'rgba(35,35,50,0.8)', position: 'relative', overflow: 'hidden' }}>
-        {sale.image && !imgError ? (
+        {activeImage && !imgError ? (
           <img
-            src={proxyImageUrl(sale.image)}
+            src={proxyImageUrl(activeImage)}
             alt={sale.collection}
-            onError={() => setImgError(true)}
+            onError={handleImageError}
             style={{
               width: '100%',
               height: '100%',
