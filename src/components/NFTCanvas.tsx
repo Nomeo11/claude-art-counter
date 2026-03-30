@@ -211,12 +211,19 @@ const NFTLiveView = () => {
     }
   }, [muted]);
 
-  // Cleanup bg audio on unmount
+  // Cleanup audio on unmount
   useEffect(() => {
     return () => {
       if (bgAudioRef.current) {
         bgAudioRef.current.pause();
         bgAudioRef.current = null;
+      }
+      if (ambientAudioRef.current) {
+        ambientAudioRef.current.pause();
+        ambientAudioRef.current = null;
+      }
+      if (ambientTimerRef.current) {
+        clearTimeout(ambientTimerRef.current);
       }
     };
   }, []);
