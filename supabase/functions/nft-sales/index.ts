@@ -293,7 +293,7 @@ async function fetchFxhashSales(): Promise<any[]> {
 
 // ─── Rarible (multi-chain) — requires API key, cached to avoid rate limits ───
 let raribleCache: { data: any[]; ts: number } = { data: [], ts: 0 };
-const RARIBLE_CACHE_TTL = 30_000; // 30 seconds
+const RARIBLE_CACHE_TTL = 120_000; // 2 minutes to avoid 429s
 async function fetchRaribleSales(): Promise<any[]> {
   const apiKey = Deno.env.get('RARIBLE_API_KEY');
   if (!apiKey) return [];
