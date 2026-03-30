@@ -89,6 +89,7 @@ export function useNFTSales(onSale: SaleCallback) {
   const intervalRef = useRef<ReturnType<typeof setTimeout>>();
   const countdownRef = useRef<ReturnType<typeof setInterval>>();
   const [countdown, setCountdown] = useState<number | null>(null);
+  const bufferedSalesRef = useRef<NFTSale[]>([]);
 
   const poll = useCallback(async () => {
     let sales = await fetchSales();
@@ -96,18 +97,23 @@ export function useNFTSales(onSale: SaleCallback) {
       sales = limitInitialBatch(sales);
       isFirstPoll = false;
     }
+    return sales;
+  }, []);
+
+  const dispatchSales = useCallback((sales: NFTSale[]) => {
     sales.forEach((sale, i) => {
       setTimeout(() => onSaleRef.current(sale), i * 300);
     });
   }, []);
 
   useEffect(() => {
-    // Start countdown IMMEDIATELY, fetch sales in background
     setCountdown(COUNTDOWN_SECONDS);
     let remaining = COUNTDOWN_SECONDS;
 
-    // Fetch initial batch in background (don't block countdown)
-    poll();
+    // Fetch initial batch in background but buffer it — don't dispatch yet
+    poll().then(sales => {
+      bufferedSalesRef.current = sales;
+    });
 
     countdownRef.current = setInterval(() => {
       remaining--;
@@ -115,24 +121,31 @@ export function useNFTSales(onSale: SaleCallback) {
       if (remaining <= 0) {
         clearInterval(countdownRef.current);
         setCountdown(null);
+
+        // Now dispatch buffered sales
+        dispatchSales(bufferedSalesRef.current);
+        bufferedSalesRef.current = [];
+
         // Start live polling
         function schedule() {
           intervalRef.current = setTimeout(async () => {
-            await poll();
+            const sales = await poll();
+            dispatchSales(sales);
             schedule();
           }, 3000);
         }
-        poll();
-        schedule();
+        poll().then(sales => {
+          dispatchSales(sales);
+          schedule();
+        });
       }
     }, 1000);
-
 
     return () => {
       clearTimeout(intervalRef.current);
       clearInterval(countdownRef.current);
     };
-  }, [poll]);
+  }, [poll, dispatchSales]);
 
   return { countdown };
 }
