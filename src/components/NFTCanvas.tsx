@@ -386,10 +386,31 @@ const NFTLiveView = () => {
           }}>
             🐋
           </span>
+          {whaleFlash && (
+            <span style={{
+              fontFamily: '"Space Mono", monospace',
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#FF8C00',
+              textShadow: '0 0 10px rgba(255,140,0,0.6)',
+              letterSpacing: 1,
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              display: 'inline-block',
+              animation: 'whale-typewriter 0.6s steps(12) forwards',
+              borderRight: '2px solid #FF8C00',
+            }}>
+              WHALE MINT!!!
+            </span>
+          )}
           <style>{`
             @keyframes whale-flash {
               0%, 100% { opacity: 1; transform: scale(1); }
               50% { opacity: 0.4; transform: scale(1.3); }
+            }
+            @keyframes whale-typewriter {
+              0% { width: 0; }
+              100% { width: 12ch; }
             }
           `}</style>
         </div>
