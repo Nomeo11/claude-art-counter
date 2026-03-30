@@ -377,8 +377,8 @@ const NFTLiveView = () => {
             fontSize: 18,
             transition: 'all 0.3s',
             ...(whaleFlash ? {
-              color: '#00ff88',
-              textShadow: '0 0 12px rgba(0,255,136,0.8), 0 0 24px rgba(0,255,136,0.4)',
+              color: '#FF8C00',
+              textShadow: '0 0 12px rgba(255,140,0,0.8), 0 0 24px rgba(255,140,0,0.4)',
               animation: 'whale-flash 0.4s ease-in-out 4',
             } : {
               color: 'rgba(255,255,255,0.2)',
