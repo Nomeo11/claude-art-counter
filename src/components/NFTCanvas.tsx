@@ -496,19 +496,20 @@ const NFTLiveView = () => {
             playsInline
             style={{
               position: 'absolute',
-              width: 280,
-              height: 280,
+              width: 320,
+              height: 320,
               bottom: 0,
-              left: -280,
+              left: -320,
               mixBlendMode: 'screen',
-              animation: 'whale-swim-across 3s linear forwards',
-              opacity: 0.85,
+              filter: 'brightness(1.3) contrast(1.2)',
+              animation: 'whale-swim-across 4.5s ease-in-out forwards',
+              opacity: 1,
             }}
           />
           <style>{`
             @keyframes whale-swim-across {
               0% { transform: translate(0, 0) scaleX(-1); }
-              100% { transform: translate(calc(100vw + 560px), calc(-100vh - 280px)) scaleX(-1); }
+              100% { transform: translate(calc(100vw + 640px), calc(-100vh - 320px)) scaleX(-1); }
             }
           `}</style>
         </div>
