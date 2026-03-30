@@ -206,6 +206,9 @@ const NFTLiveView = () => {
     if (bgAudioRef.current) {
       bgAudioRef.current.muted = muted;
     }
+    if (ambientAudioRef.current) {
+      ambientAudioRef.current.muted = muted;
+    }
   }, [muted]);
 
   // Cleanup bg audio on unmount
